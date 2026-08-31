@@ -18,6 +18,7 @@ function renderApp(){
      (mods.indexOf('pdv')>=0?navBtn('pdv','Frente de Loja'):'')+
      (mods.indexOf('agendamento')>=0?navBtn('agenda','Agendamentos'):'')+
      navBtn('catalogo','Catálogo')+
+     navBtn('usuarios','Usuários')+
      (mods.indexOf('agendamento')>=0?navBtn('profissionais','Profissionais'):'')+
      navBtn('unidades','Unidades')+
     '</div>'+
@@ -35,6 +36,7 @@ function renderMiolo(){
   if(ABA_MOD==='pdv') return renderPDV();
   if(ABA_MOD==='agenda') return renderAgendamentos();
   if(ABA_MOD==='catalogo') return renderCatalogo();
+  if(ABA_MOD==='usuarios') return renderUsuarios();
   if(ABA_MOD==='profissionais') return renderProfissionais();
   if(ABA_MOD==='unidades') return renderUnidades();
 }
