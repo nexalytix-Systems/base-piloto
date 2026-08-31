@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Base — piloto</title>
+<script src="supabase.js"></script>
+<style>
+:root{
+  --bg:#0f1115; --bg2:#161920; --card:#1b1f28; --line:#2a2f3a;
+  --tx:#e8eaed; --tx2:#9aa0ac; --acc:#4f7fff; --acc-d:#3a63d6;
+  --ok:#2fbf71; --err:#e5484d; --warn:#e0a934;
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);min-height:100vh}
+button{font-family:inherit;cursor:pointer;border:none;border-radius:8px;padding:10px 16px;font-size:14px}
+.btn{background:var(--acc);color:#fff}
+.btn:hover{background:var(--acc-d)}
+.btn2{background:var(--card);color:var(--tx);border:1px solid var(--line)}
+.btnDanger{background:var(--err);color:#fff}
+input,select{font-family:inherit;background:var(--bg2);border:1px solid var(--line);color:var(--tx);
+  border-radius:8px;padding:9px 12px;font-size:14px;width:100%}
+label{font-size:12.5px;color:var(--tx2);display:block;margin-bottom:4px}
+.fld{margin-bottom:14px}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:20px}
+.wrap{max-width:1100px;margin:0 auto;padding:24px}
+h1{font-size:22px;font-weight:600;margin:0 0 4px}
+h2{font-size:17px;font-weight:600;margin:0 0 12px}
+p.hint{color:var(--tx2);font-size:13px;margin:0 0 20px}
+.topbar{background:var(--bg2);border-bottom:1px solid var(--line);padding:12px 24px;
+  display:flex;align-items:center;gap:16px}
+.topbar b{font-size:15px}
+.topbar .sp{flex:1}
+.nav{display:flex;gap:4px;flex-wrap:wrap;margin-bottom:20px}
+.nav button{background:transparent;color:var(--tx2);border-radius:8px}
+.nav button.on{background:var(--card);color:var(--tx)}
+table{width:100%;border-collapse:collapse}
+th{text-align:left;font-size:12px;color:var(--tx2);padding:8px 10px;border-bottom:1px solid var(--line)}
+td{padding:10px;border-bottom:1px solid var(--line);font-size:14px}
+.pill{display:inline-block;padding:3px 9px;border-radius:20px;font-size:11.5px;font-weight:600}
+.pill.ok{background:rgba(47,191,113,.15);color:var(--ok)}
+.pill.warn{background:rgba(224,169,52,.15);color:var(--warn)}
+.pill.err{background:rgba(229,72,77,.15);color:var(--err)}
+.toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--card);
+  border:1px solid var(--line);padding:12px 20px;border-radius:10px;font-size:14px;z-index:999;
+  opacity:0;transition:opacity .2s;pointer-events:none}
+.toast.on{opacity:1}
+.modalBg{position:fixed;inset:0;background:rgba(0,0,0,.5);display:flex;align-items:center;
+  justify-content:center;z-index:500;padding:20px}
+.modal{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:24px;
+  width:100%;max-width:440px;max-height:88vh;overflow:auto}
+.modal h2{margin-bottom:16px}
+.modalActions{display:flex;justify-content:flex-end;gap:10px;margin-top:20px}
+.itemGrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px;margin-bottom:20px}
+.itemBtn{background:var(--bg2);border:1px solid var(--line);border-radius:10px;padding:14px;
+  text-align:left;color:var(--tx)}
+.itemBtn:hover{border-color:var(--acc)}
+.itemBtn b{display:block;font-size:14px;margin-bottom:4px}
+.itemBtn span{color:var(--tx2);font-size:12.5px}
+.cartRow{display:flex;justify-content:space-between;align-items:center;padding:8px 0;
+  border-bottom:1px solid var(--line);font-size:14px}
+.cartRow button{background:transparent;color:var(--err);padding:2px 8px}
+.totalBar{display:flex;justify-content:space-between;font-size:18px;font-weight:600;
+  padding:14px 0;border-top:1px solid var(--line);margin-top:10px}
+.centro{min-height:80vh;display:flex;align-items:center;justify-content:center}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<div id="toast" class="toast"></div>
+<script src="app.js"></script>
+<script src="telas_login.js"></script>
+<script src="casca.js"></script>
+<script src="tela_catalogo.js"></script>
+<script src="tela_pdv.js"></script>
+<script src="tela_profissionais.js"></script>
+<script src="tela_agendamentos.js"></script>
+<script src="tela_unidades.js"></script>
+</body>
+</html>
