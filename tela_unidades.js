@@ -2,10 +2,11 @@
    UNIDADES — lista simples + trocar a unidade atual
    ========================================================== */
 function renderUnidades(){
+  var admin = souAdminOrganizacao();
   var html = '<div class="card">'+
    '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">'+
     '<h2 style="margin:0">Unidades</h2>'+
-    '<button class="btn" onclick="abrirFormUnidade()">+ Nova unidade</button>'+
+    (admin?'<button class="btn" onclick="abrirFormUnidade()">+ Nova unidade</button>':'')+
    '</div>'+
    '<table><thead><tr><th>Nome</th><th>Vínculo</th><th>Situação</th><th></th></tr></thead><tbody>'+
    SESSAO.unidades.map(function(u){
@@ -18,6 +19,7 @@ function renderUnidades(){
         ?'<span style="color:var(--tx2);font-size:13px">unidade atual</span>'
         :'<button class="btn2" onclick="trocarUnidade(\''+u.id+'\')">Usar esta</button>')+'</td></tr>';
    }).join('')+
+   (!SESSAO.unidades.length?'<tr><td colspan="4" style="color:var(--tx2)">Você não está vinculado a nenhuma unidade ainda — peça pro administrador liberar.</td></tr>':'')+
    '</tbody></table></div>';
   $('miolo').innerHTML = html;
 }
@@ -27,6 +29,7 @@ function trocarUnidade(id){
   renderApp();
 }
 function abrirFormUnidade(){
+  if(!souAdminOrganizacao()){ toast('Só o administrador da organização cria unidades.'); return; }
   var html = '<div class="modalBg" onclick="if(event.target===this)fecharModal()"><div class="modal">'+
    '<h2>Nova unidade</h2>'+
    '<div class="fld"><label>Nome *</label><input id="unNome" placeholder="Ex.: Loja Shopping Sul"></div>'+

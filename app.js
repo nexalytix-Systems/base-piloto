@@ -8,7 +8,7 @@ var CFG = {
 };
 
 var SB = null;           // cliente Supabase
-var SESSAO = { token: null, pessoa: null, organizacao: null, unidades: [], unidadeAtual: null };
+var SESSAO = { token: null, pessoa: null, organizacao: null, unidades: [], unidadeAtual: null, telasPermitidas: null };
 var TELA = 'login';
 var ABA_MOD = 'pdv';
 
@@ -48,7 +48,7 @@ async function iniciarSessao(){
 async function carregarPessoa(userId){
   var cli = cliente();
   var { data: pessoa, error } = await cli.from('pessoas')
-    .select('id,nome,cargo,organizacao_id,unidade_id,ativo')
+    .select('id,nome,cargo,organizacao_id,unidade_id,ativo,perfil_id')
     .eq('id', userId).maybeSingle();
   if(error || !pessoa){ SESSAO.pessoa = null; return; }
   SESSAO.pessoa = pessoa;
@@ -56,11 +56,23 @@ async function carregarPessoa(userId){
   var { data: org } = await cli.from('organizacoes').select('*').eq('id', pessoa.organizacao_id).maybeSingle();
   SESSAO.organizacao = org || null;
 
+  /* a consulta abaixo já vem filtrada pelo próprio banco (RLS em
+     "unidades"): admin_organizacao recebe todas, os demais só as
+     que estão vinculados via pessoas_unidades — não precisa filtrar
+     de novo aqui no cliente. */
   var { data: unidades } = await cli.from('unidades').select('*').eq('organizacao_id', pessoa.organizacao_id).order('nome');
   SESSAO.unidades = unidades || [];
   SESSAO.unidadeAtual = pessoa.unidade_id
     ? SESSAO.unidades.find(function(u){return u.id===pessoa.unidade_id})
     : SESSAO.unidades[0];
+
+  SESSAO.telasPermitidas = []; // padrão seguro: sem perfil definido = nenhuma tela (não "tudo")
+  if(pessoa.cargo==='admin_organizacao'){
+    SESSAO.telasPermitidas = null; // null = acesso total
+  } else if(pessoa.perfil_id){
+    var { data: perfil } = await cli.from('perfis_acesso').select('telas_permitidas').eq('id', pessoa.perfil_id).maybeSingle();
+    SESSAO.telasPermitidas = perfil ? (perfil.telas_permitidas||[]) : [];
+  }
 }
 
 async function fazerLogin(email, senha){
@@ -76,7 +88,7 @@ async function fazerLogin(email, senha){
 async function sair(){
   var cli = cliente();
   await cli.auth.signOut();
-  SESSAO = { token:null, pessoa:null, organizacao:null, unidades:[], unidadeAtual:null };
+  SESSAO = { token:null, pessoa:null, organizacao:null, unidades:[], unidadeAtual:null, telasPermitidas:null };
   TELA = 'login';
   render();
 }

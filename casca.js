@@ -5,6 +5,9 @@ function renderApp(){
   var org = SESSAO.organizacao;
   var un = SESSAO.unidadeAtual;
   var mods = (org && org.modulos_contratados) || [];
+  var telas = SESSAO.telasPermitidas; // null = acesso total
+
+  function libera(id){ return !telas || telas.indexOf(id)>=0; }
 
   var html = '<div class="topbar">'+
     '<b>'+E(org?org.nome:'')+'</b>'+
@@ -15,12 +18,13 @@ function renderApp(){
    '</div>'+
    '<div class="wrap">'+
     '<div class="nav">'+
-     (mods.indexOf('pdv')>=0?navBtn('pdv','Frente de Loja'):'')+
-     (mods.indexOf('agendamento')>=0?navBtn('agenda','Agendamentos'):'')+
-     navBtn('catalogo','Catálogo')+
-     navBtn('usuarios','Usuários')+
-     (mods.indexOf('agendamento')>=0?navBtn('profissionais','Profissionais'):'')+
-     navBtn('unidades','Unidades')+
+     (mods.indexOf('pdv')>=0&&libera('pdv')?navBtn('pdv','Frente de Loja'):'')+
+     (mods.indexOf('agendamento')>=0&&libera('agenda')?navBtn('agenda','Agendamentos'):'')+
+     (libera('catalogo')?navBtn('catalogo','Catálogo'):'')+
+     (libera('usuarios')?navBtn('usuarios','Usuários'):'')+
+     (libera('perfis')?navBtn('perfis','Perfis de Acesso'):'')+
+     (mods.indexOf('agendamento')>=0&&libera('profissionais')?navBtn('profissionais','Profissionais'):'')+
+     (libera('unidades')?navBtn('unidades','Unidades'):'')+
     '</div>'+
     '<div id="miolo"></div>'+
    '</div>';
@@ -37,6 +41,7 @@ function renderMiolo(){
   if(ABA_MOD==='agenda') return renderAgendamentos();
   if(ABA_MOD==='catalogo') return renderCatalogo();
   if(ABA_MOD==='usuarios') return renderUsuarios();
+  if(ABA_MOD==='perfis') return renderPerfis();
   if(ABA_MOD==='profissionais') return renderProfissionais();
   if(ABA_MOD==='unidades') return renderUnidades();
 }

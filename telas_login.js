@@ -69,15 +69,37 @@ async function onCriarOrganizacao(){
   }).select().single();
   if(e1){ toast('Não consegui criar a organização: '+e1.message); return; }
 
-  var { data: unidade, error: e2 } = await cli.from('unidades').insert({
-    organizacao_id:org.id, tipo_vinculo:'filial', nome:unidadeNome, pendente_admin:false
-  }).select().single();
-  if(e2){ toast('Organização criada, mas a unidade falhou: '+e2.message); return; }
-
+  /* a pessoa reivindica a organização PRIMEIRO — depois disso ela já
+     é admin_organizacao, e as próximas gravações (unidade, perfis)
+     passam a valer pela regra normal (organizacao_id = minha_organizacao()),
+     sem precisar de mais nenhuma exceção de bootstrap no banco. */
   var { error: e3 } = await cli.from('pessoas').insert({
     id:userId, organizacao_id:org.id, unidade_id:null, nome:'Administrador', cargo:'admin_organizacao'
   });
   if(e3){ toast('Não consegui vincular seu usuário: '+e3.message); return; }
+
+  /* Insert sem .select() de propósito: a política de "unidades" olha
+     pra própria tabela unidades (via minhas_unidades()) — dentro do
+     MESMO comando, o Postgres ainda não enxerga a linha que esse
+     comando está inserindo. Busca em dois passos separados resolve. */
+  var { error: e2 } = await cli.from('unidades').insert({
+    organizacao_id:org.id, tipo_vinculo:'filial', nome:unidadeNome, pendente_admin:false
+  });
+  if(e2){ toast('Organização criada, mas a unidade falhou: '+e2.message); return; }
+  var { data: unidade } = await cli.from('unidades').select('*')
+    .eq('organizacao_id', org.id).eq('nome', unidadeNome).maybeSingle();
+
+  var { data: perfilAdmin } = await cli.from('perfis_acesso').insert({
+    organizacao_id: org.id, nome:'Administrador',
+    telas_permitidas:['pdv','agenda','catalogo','profissionais','unidades','usuarios','perfis']
+  }).select().single();
+  await cli.from('perfis_acesso').insert({
+    organizacao_id: org.id, nome:'Operador',
+    telas_permitidas:['pdv','agenda']
+  });
+  if(perfilAdmin){
+    await cli.from('pessoas').update({ perfil_id: perfilAdmin.id }).eq('id', userId);
+  }
 
   await carregarPessoa(userId);
   TELA='app'; ABA_MOD='pdv';
