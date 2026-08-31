@@ -7,6 +7,7 @@ var TELAS_DISPONIVEIS = [
   {id:'pdv', nome:'Frente de Loja (PDV)'},
   {id:'agenda', nome:'Agendamentos'},
   {id:'catalogo', nome:'Catálogo'},
+  {id:'financeiro', nome:'Financeiro'},
   {id:'profissionais', nome:'Profissionais'},
   {id:'unidades', nome:'Unidades'},
   {id:'usuarios', nome:'Usuários e Permissões'},

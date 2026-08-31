@@ -28,19 +28,41 @@ function toast(msg){
 
 function cliente(){
   if(!SB){
-    if(!CFG.url||!CFG.chave){ toast('Configure CFG.url e CFG.chave no topo do app.js.'); throw new Error('sem config'); }
+    if(!CFG.url||!CFG.chave){ throw new Error('sem_config'); }
     SB = window.supabase.createClient(CFG.url, CFG.chave);
   }
   return SB;
 }
+function renderErroConfig(){
+  $('app').innerHTML = '<div class="centro"><div class="card" style="width:100%;max-width:480px">'+
+   '<h1>Falta configurar</h1>'+
+   '<p class="hint">Este sistema ainda não sabe com qual projeto Supabase falar.</p>'+
+   '<p style="font-size:14px;line-height:1.6">Abra o arquivo <code>app.js</code>, ache '+
+   '<code>var CFG = {</code> perto do topo, e preencha:</p>'+
+   '<pre style="background:var(--bg2);border:1px solid var(--line);border-radius:8px;'+
+   'padding:12px;font-size:13px;overflow:auto">var CFG = {\n  url: \'https://SEU-PROJETO.supabase.co\',\n  chave: \'sua-chave-anon-aqui\'\n};</pre>'+
+   '<p class="hint" style="margin-top:14px">A URL e a chave ficam em Project Settings → API, '+
+   'no painel do seu projeto Supabase (a chave anon/publishable, nunca a service_role).</p>'+
+   '</div></div>';
+}
 
 /* ---------- sessão ---------- */
 async function iniciarSessao(){
-  var cli = cliente();
-  var { data } = await cli.auth.getSession();
-  if(data && data.session){
-    SESSAO.token = data.session.access_token;
-    await carregarPessoa(data.session.user.id);
+  var cli;
+  try{ cli = cliente(); }
+  catch(e){ renderErroConfig(); return; }
+  try{
+    var { data } = await cli.auth.getSession();
+    if(data && data.session){
+      SESSAO.token = data.session.access_token;
+      await carregarPessoa(data.session.user.id);
+    }
+  }catch(e){
+    $('app').innerHTML = '<div class="centro"><div class="card" style="width:100%;max-width:480px">'+
+     '<h1>Não consegui falar com o servidor</h1>'+
+     '<p class="hint">Verifique sua internet e a URL/chave configuradas em app.js. Detalhe técnico: '+
+     E((e&&e.message)||'erro desconhecido')+'</p></div></div>';
+    return;
   }
   render();
 }
