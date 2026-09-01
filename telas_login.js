@@ -3,7 +3,13 @@
    ========================================================== */
 function renderLogin(){
   $('app').innerHTML =
-   '<div class="centro"><div class="card" style="width:100%;max-width:380px">'+
+   '<div class="centro"><div style="width:100%;max-width:380px">'+
+    '<div style="text-align:center;margin-bottom:24px">'+
+     '<img src="logo-icone.png" alt="Wirtu" style="width:64px;height:64px;border-radius:16px">'+
+     '<div style="font-size:26px;font-weight:700;margin-top:10px">Wirtu</div>'+
+     '<div style="font-size:13px;color:var(--tx2)">a virtude da gestão simples</div>'+
+    '</div>'+
+    '<div class="card">'+
     '<h1>Entrar</h1><p class="hint">Acesse com seu e-mail e senha.</p>'+
     '<div class="fld"><label>E-mail</label><input id="lgEmail" type="email"></div>'+
     '<div class="fld"><label>Senha</label><input id="lgSenha" type="password"></div>'+
@@ -11,7 +17,7 @@ function renderLogin(){
     '<p class="hint" style="margin-top:16px">Sem conta ainda? Peça pro administrador da sua organização '+
     'te cadastrar em Usuários, ou crie a conta pelo painel do Supabase (Authentication → Users) e depois '+
     'entre aqui pra montar a organização.</p>'+
-   '</div></div>';
+   '</div></div></div>';
   $('lgSenha').addEventListener('keydown', function(e){ if(e.key==='Enter') onClickLogin(); });
 }
 function onClickLogin(){
