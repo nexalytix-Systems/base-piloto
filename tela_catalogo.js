@@ -60,6 +60,11 @@ function abrirFormItem(id){
      '<div class="fld"><label>Duração (minutos)</label>'+
       '<input id="itDuracao" type="number" value="'+E(it&&it.duracao_minutos?it.duracao_minutos:30)+'"></div>'+
     '</div>'+
+    '<div id="itCamposProduto" style="display:'+((!it||it.tipo==='produto')?'block':'none')+'">'+
+     '<label style="display:flex;gap:8px;align-items:center;font-size:14px;padding:6px 0">'+
+      '<input type="checkbox" id="itControlaEstoque" '+(it&&it.controla_estoque?'checked':'')+' style="width:auto">'+
+      'Controlar estoque deste item (baixa sozinho a cada venda)</label>'+
+    '</div>'+
     '<div class="modalActions">'+
      '<button class="btn2" onclick="fecharModal()">Cancelar</button>'+
      '<button class="btn" onclick="salvarItem('+(it?"'"+it.id+"'":'null')+')">Salvar</button>'+
@@ -68,6 +73,7 @@ function abrirFormItem(id){
 }
 function onTipoItemMudou(){
   $('itCamposServico').style.display = $('itTipo').value==='servico' ? 'block' : 'none';
+  $('itCamposProduto').style.display = $('itTipo').value==='produto' ? 'block' : 'none';
 }
 function fecharModal(){
   var bg = document.querySelector('.modalBg');
@@ -86,7 +92,8 @@ async function salvarItem(id){
     preco: Number(precoTxt.replace(/\./g,'').replace(',','.'))||0,
     unidade_id: SESSAO.unidadeAtual ? SESSAO.unidadeAtual.id : null,
     duracao_minutos: tipo==='servico' ? (parseInt($('itDuracao').value,10)||30) : null,
-    requer_profissional: tipo==='servico'
+    requer_profissional: tipo==='servico',
+    controla_estoque: tipo==='produto' ? $('itControlaEstoque').checked : false
   };
   var cli = cliente();
   var r = id

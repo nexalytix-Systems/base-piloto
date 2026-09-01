@@ -8,6 +8,7 @@ var TELAS_DISPONIVEIS = [
   {id:'agenda', nome:'Agendamentos'},
   {id:'catalogo', nome:'Catálogo'},
   {id:'financeiro', nome:'Financeiro'},
+  {id:'estoque', nome:'Estoque'},
   {id:'profissionais', nome:'Profissionais'},
   {id:'unidades', nome:'Unidades'},
   {id:'usuarios', nome:'Usuários e Permissões'},

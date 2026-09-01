@@ -22,6 +22,7 @@ function renderApp(){
      (mods.indexOf('agendamento')>=0&&libera('agenda')?navBtn('agenda','Agendamentos'):'')+
      (libera('catalogo')?navBtn('catalogo','Catálogo'):'')+
      (libera('financeiro')?navBtn('financeiro','Financeiro'):'')+
+     (libera('estoque')?navBtn('estoque','Estoque'):'')+
      (libera('usuarios')?navBtn('usuarios','Usuários'):'')+
      (libera('perfis')?navBtn('perfis','Perfis de Acesso'):'')+
      (mods.indexOf('agendamento')>=0&&libera('profissionais')?navBtn('profissionais','Profissionais'):'')+
@@ -42,6 +43,7 @@ function renderMiolo(){
   if(ABA_MOD==='agenda') return renderAgendamentos();
   if(ABA_MOD==='catalogo') return renderCatalogo();
   if(ABA_MOD==='financeiro') return renderFinanceiro();
+  if(ABA_MOD==='estoque') return renderEstoque();
   if(ABA_MOD==='usuarios') return renderUsuarios();
   if(ABA_MOD==='perfis') return renderPerfis();
   if(ABA_MOD==='profissionais') return renderProfissionais();
