@@ -17,22 +17,9 @@ async function renderFinanceiro(){
   CACHE_LANCAMENTOS = lanc || [];
   desenharFinanceiro();
 }
-function subNavFin(id, rotulo){
-  return '<button class="'+(ABA_FIN===id?'on':'')+'" onclick="irParaFin(\''+id+'\')">'+E(rotulo)+'</button>';
-}
-function irParaFin(aba){ ABA_FIN=aba; desenharFinanceiro(); }
+function irParaFin(aba){ ABA_FIN=aba; renderApp(); }
 
 function desenharFinanceiro(){
-  var html = '<div class="nav" style="margin-bottom:14px">'+
-   subNavFin('lancamentos','Lançamentos')+
-   subNavFin('pagar','Contas a Pagar')+
-   subNavFin('receber','Contas a Receber')+
-   subNavFin('conciliacao','Conciliação Bancária')+
-   subNavFin('fluxo','Fluxo de Caixa')+
-   subNavFin('contas','Contas')+
-   subNavFin('categorias','Categorias')+
-   '</div><div id="miolo-fin"></div>';
-  $('miolo').innerHTML = html;
   if(ABA_FIN==='lancamentos') return desenharLancamentos();
   if(ABA_FIN==='pagar') return desenharContasPagarReceber('despesa');
   if(ABA_FIN==='receber') return desenharContasPagarReceber('receita');
@@ -66,7 +53,7 @@ function desenharLancamentos(){
    }).join('')+
    (!CACHE_LANCAMENTOS.length?'<tr><td colspan="7" style="color:var(--tx2)">Nenhum lançamento ainda.</td></tr>':'')+
    '</tbody></table></div>';
-  $('miolo-fin').innerHTML = html;
+  $('miolo').innerHTML = html;
 }
 function abrirFormLancamento(tipoFixo){
   var html = '<div class="modalBg" onclick="if(event.target===this)fecharModal()"><div class="modal">'+
@@ -157,7 +144,7 @@ function desenharContasPagarReceber(tipo){
    }).join('')+
    (!lista.length?'<tr><td colspan="6" style="color:var(--tx2)">Nada por aqui ainda.</td></tr>':'')+
    '</tbody></table></div>';
-  $('miolo-fin').innerHTML = html;
+  $('miolo').innerHTML = html;
 }
 
 /* ---------- Conciliação Bancária ---------- */
@@ -180,7 +167,7 @@ function desenharConciliacao(){
    }).join('')+
    (!pagos.length?'<tr><td colspan="5" style="color:var(--tx2)">Nenhum lançamento pago ainda pra conciliar.</td></tr>':'')+
    '</tbody></table></div>';
-  $('miolo-fin').innerHTML = html;
+  $('miolo').innerHTML = html;
 }
 async function alternarConciliado(id, valor){
   var cli = cliente();
@@ -225,7 +212,7 @@ function desenharFluxoCaixa(){
    }).join('')+
    (!linhas.length?'<tr><td colspan="4" style="color:var(--tx2)">Nenhum lançamento pago ainda.</td></tr>':'')+
    '</tbody></table></div>';
-  $('miolo-fin').innerHTML = html;
+  $('miolo').innerHTML = html;
 }
 
 /* ---------- Contas (bancárias / caixa) ---------- */
@@ -246,7 +233,7 @@ function desenharContas(){
    }).join('')+
    (!CACHE_CONTAS_FIN.length?'<tr><td colspan="5" style="color:var(--tx2)">Nenhuma conta ainda.</td></tr>':'')+
    '</tbody></table></div>';
-  $('miolo-fin').innerHTML = html;
+  $('miolo').innerHTML = html;
 }
 function abrirFormConta(id){
   var c = id ? CACHE_CONTAS_FIN.find(function(x){return x.id===id}) : null;
@@ -302,7 +289,7 @@ function desenharCategoriasFin(){
    }).join('')+
    (!CACHE_CATEGORIAS_FIN.length?'<tr><td colspan="4" style="color:var(--tx2)">Nenhuma categoria ainda.</td></tr>':'')+
    '</tbody></table></div>';
-  $('miolo-fin').innerHTML = html;
+  $('miolo').innerHTML = html;
 }
 function abrirFormCategoriaFin(id){
   var c = id ? CACHE_CATEGORIAS_FIN.find(function(x){return x.id===id}) : null;

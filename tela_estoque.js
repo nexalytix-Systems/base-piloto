@@ -32,26 +32,13 @@ async function renderEstoque(){
   CACHE_TRANSFERENCIAS = transf || [];
   desenharEstoque();
 }
-function subNavEst(id, rotulo){
-  return '<button class="'+(ABA_EST===id?'on':'')+'" onclick="irParaEst(\''+id+'\')">'+E(rotulo)+'</button>';
-}
-function irParaEst(aba){ ABA_EST=aba; desenharEstoque(); }
+function irParaEst(aba){ ABA_EST=aba; renderApp(); }
 function nomeItemCat(id){ var it=CACHE_CATALOGO.find(function(x){return x.id===id}); return it?it.nome:'—'; }
 function nomeFornecedor(id){ var f=CACHE_FORNECEDORES.find(function(x){return x.id===id}); return f?f.nome:'—'; }
 function nomeMotivo(id){ var m=CACHE_MOTIVOS.find(function(x){return x.id===id}); return m?m.nome:'—'; }
 function nomeUnidadeById(id){ var u=SESSAO.unidades.find(function(x){return x.id===id}); return u?u.nome:'—'; }
 
 function desenharEstoque(){
-  var html = '<div class="nav" style="margin-bottom:14px">'+
-   subNavEst('saldo','Estoque Atual')+
-   subNavEst('movimentacao','Movimentação')+
-   subNavEst('notas','Notas de Entrada')+
-   subNavEst('contagem','Contagem')+
-   subNavEst('transferencia','Transferência')+
-   subNavEst('fornecedores','Fornecedores')+
-   subNavEst('motivos','Motivos')+
-   '</div><div id="miolo-est"></div>';
-  $('miolo').innerHTML = html;
   if(ABA_EST==='saldo') return desenharSaldo();
   if(ABA_EST==='movimentacao') return desenharMovimentacao();
   if(ABA_EST==='notas') return desenharNotasEntrada();
@@ -76,7 +63,7 @@ function desenharSaldo(){
    }).join('')+
    (!comControle.length?'<tr><td colspan="2" style="color:var(--tx2)">Nenhum produto com controle de estoque ativado ainda — marque isso no Catálogo.</td></tr>':'')+
    '</tbody></table></div>';
-  $('miolo-est').innerHTML = html;
+  $('miolo').innerHTML = html;
 }
 
 /* ---------- Movimentação (lançamento manual: perda, ajuste...) ---------- */
@@ -97,7 +84,7 @@ function desenharMovimentacao(){
    }).join('')+
    (!CACHE_MOVIMENTACOES.length?'<tr><td colspan="6" style="color:var(--tx2)">Nenhuma movimentação ainda.</td></tr>':'')+
    '</tbody></table></div>';
-  $('miolo-est').innerHTML = html;
+  $('miolo').innerHTML = html;
 }
 function abrirFormMovimentacao(){
   var produtos = CACHE_CATALOGO.filter(function(i){return i.tipo==='produto'});
@@ -161,7 +148,7 @@ function desenharNotasEntrada(){
    }).join('')+
    (!CACHE_NOTAS_ENTRADA.length?'<tr><td colspan="5" style="color:var(--tx2)">Nenhuma nota ainda.</td></tr>':'')+
    '</tbody></table></div>';
-  $('miolo-est').innerHTML = html;
+  $('miolo').innerHTML = html;
 }
 var CARRINHO_NOTA = [];
 function abrirFormNotaEntrada(){
@@ -255,7 +242,7 @@ function desenharContagens(){
    }).join('')+
    (!CACHE_CONTAGENS.length?'<tr><td colspan="3" style="color:var(--tx2)">Nenhuma contagem ainda.</td></tr>':'')+
    '</tbody></table></div>';
-  $('miolo-est').innerHTML = html;
+  $('miolo').innerHTML = html;
 }
 async function abrirNovaContagem(){
   if(!SESSAO.unidadeAtual){ toast('Selecione uma unidade primeiro.'); return; }
@@ -343,7 +330,7 @@ function desenharTransferencias(){
    }).join('')+
    (!CACHE_TRANSFERENCIAS.length?'<tr><td colspan="5" style="color:var(--tx2)">Nenhuma transferência ainda.</td></tr>':'')+
    '</tbody></table></div>';
-  $('miolo-est').innerHTML = html;
+  $('miolo').innerHTML = html;
 }
 var CARRINHO_TRANSF = [];
 function abrirFormTransferencia(){
@@ -434,7 +421,7 @@ function desenharFornecedores(){
    }).join('')+
    (!CACHE_FORNECEDORES.length?'<tr><td colspan="5" style="color:var(--tx2)">Nenhum fornecedor ainda.</td></tr>':'')+
    '</tbody></table></div>';
-  $('miolo-est').innerHTML = html;
+  $('miolo').innerHTML = html;
 }
 function abrirFormFornecedor(id){
   var f = id ? CACHE_FORNECEDORES.find(function(x){return x.id===id}) : null;
@@ -484,7 +471,7 @@ function desenharMotivos(){
    }).join('')+
    (!CACHE_MOTIVOS.length?'<tr><td colspan="4" style="color:var(--tx2)">Nenhum motivo ainda.</td></tr>':'')+
    '</tbody></table></div>';
-  $('miolo-est').innerHTML = html;
+  $('miolo').innerHTML = html;
 }
 function abrirFormMotivo(id){
   var m = id ? CACHE_MOTIVOS.find(function(x){return x.id===id}) : null;
