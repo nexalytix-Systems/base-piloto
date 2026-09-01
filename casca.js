@@ -13,7 +13,8 @@ var ICONES_SVG = {
   usuarios: '<circle cx="9" cy="8" r="3.2"/><path d="M3.5 20a5.5 5.5 0 0 1 11 0"/><circle cx="17" cy="9" r="2.6"/><path d="M15 20a4.5 4.5 0 0 1 6.5-4"/>',
   perfis: '<path d="M12 2 4 5v6c0 5 3.4 8.7 8 11 4.6-2.3 8-6 8-11V5l-8-3z"/>',
   profissionais: '<circle cx="12" cy="8" r="3.6"/><path d="M4.5 21a7.5 7.5 0 0 1 15 0"/>',
-  unidades: '<rect x="4" y="3" width="16" height="18"/><line x1="9" y1="8" x2="9.01" y2="8"/><line x1="15" y1="8" x2="15.01" y2="8"/><line x1="9" y1="13" x2="9.01" y2="13"/><line x1="15" y1="13" x2="15.01" y2="13"/><line x1="9" y1="18" x2="15" y2="18"/>'
+  unidades: '<rect x="4" y="3" width="16" height="18"/><line x1="9" y1="8" x2="9.01" y2="8"/><line x1="15" y1="8" x2="15.01" y2="8"/><line x1="9" y1="13" x2="9.01" y2="13"/><line x1="15" y1="13" x2="15.01" y2="13"/><line x1="9" y1="18" x2="15" y2="18"/>',
+  relatorios: '<path d="M4 20V10M11 20V4M18 20v-7"/>'
 };
 function icone(nome){
   return '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" '+
@@ -38,6 +39,10 @@ function montarItensMenu(){
     {id:'saldo',rotulo:'Estoque Atual'},{id:'movimentacao',rotulo:'Movimentação'},{id:'notas',rotulo:'Notas de Entrada'},
     {id:'contagem',rotulo:'Contagem'},{id:'transferencia',rotulo:'Transferência'},
     {id:'fornecedores',rotulo:'Fornecedores'},{id:'motivos',rotulo:'Motivos'}
+  ]});
+  if(libera('relatorios')) itens.push({id:'relatorios', rotulo:'Relatórios', icone:'relatorios', filho:'ABA_REL', ir:'irParaRel', sub:[
+    {id:'dashboard',rotulo:'Dashboard'},{id:'faturamento',rotulo:'Faturamento'},
+    {id:'itens',rotulo:'Itens Mais Vendidos'},{id:'cancelamentos',rotulo:'Cancelamentos'},{id:'dre',rotulo:'DRE'}
   ]});
   if(libera('usuarios')) itens.push({id:'usuarios', rotulo:'Usuários', icone:'usuarios'});
   if(libera('perfis')) itens.push({id:'perfis', rotulo:'Perfis de Acesso', icone:'perfis'});
@@ -93,6 +98,7 @@ function renderMiolo(){
   if(ABA_MOD==='catalogo') return renderCatalogo();
   if(ABA_MOD==='financeiro') return renderFinanceiro();
   if(ABA_MOD==='estoque') return renderEstoque();
+  if(ABA_MOD==='relatorios') return renderRelatorios();
   if(ABA_MOD==='usuarios') return renderUsuarios();
   if(ABA_MOD==='perfis') return renderPerfis();
   if(ABA_MOD==='profissionais') return renderProfissionais();
