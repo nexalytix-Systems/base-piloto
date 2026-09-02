@@ -73,6 +73,11 @@ async function iniciarSessao(){
         return;
       }
       await carregarPessoa(data.session.user.id);
+      if(SESSAO.pessoa && SESSAO.pessoa.senha_temporaria){
+        TELA = 'trocar-senha-obrigatoria';
+        render();
+        return;
+      }
     }
   }catch(e){
     $('app').innerHTML = '<div class="centro"><div class="card" style="width:100%;max-width:480px">'+
@@ -149,7 +154,11 @@ async function fazerLogin(email, senha){
   if(error){ toast('Não consegui entrar: '+error.message); return; }
   SESSAO.token = data.session.access_token;
   await carregarPessoa(data.user.id);
-  TELA = SESSAO.pessoa ? 'app' : 'bootstrap';
+  if(SESSAO.pessoa && SESSAO.pessoa.senha_temporaria){
+    TELA = 'trocar-senha-obrigatoria';
+  } else {
+    TELA = SESSAO.pessoa ? 'app' : 'bootstrap';
+  }
   render();
 }
 
@@ -167,7 +176,33 @@ function render(){
   if(TELA==='login') return renderLogin();
   if(TELA==='bootstrap') return renderBootstrap();
   if(TELA==='definir-senha') return renderDefinirSenha();
+  if(TELA==='trocar-senha-obrigatoria') return renderTrocarSenhaObrigatoria();
   return renderApp();
+}
+function renderTrocarSenhaObrigatoria(){
+  $('app').innerHTML =
+   '<div class="centro"><div class="card" style="width:100%;max-width:380px">'+
+    '<h1>Troque sua senha</h1>'+
+    '<p class="hint">Você entrou com a senha temporária que recebeu por e-mail. '+
+    'Defina uma senha sua pra continuar — isso só acontece uma vez.</p>'+
+    '<div class="fld"><label>Nova senha</label><input id="tsSenha" type="password" placeholder="mínimo 6 caracteres"></div>'+
+    '<div class="fld"><label>Confirmar senha</label><input id="tsSenha2" type="password"></div>'+
+    '<button class="btn" style="width:100%" onclick="onTrocarSenhaObrigatoria()">Salvar e continuar</button>'+
+   '</div></div>';
+}
+async function onTrocarSenhaObrigatoria(){
+  var s1 = $('tsSenha').value;
+  var s2 = $('tsSenha2').value;
+  if(!s1||s1.length<6){ toast('A senha precisa ter ao menos 6 caracteres.'); return; }
+  if(s1!==s2){ toast('As senhas não são iguais.'); return; }
+  var cli = cliente();
+  var { error } = await cli.auth.updateUser({ password: s1 });
+  if(error){ toast('Não consegui salvar: '+error.message); return; }
+  await cli.from('pessoas').update({ senha_temporaria: false }).eq('id', SESSAO.pessoa.id);
+  SESSAO.pessoa.senha_temporaria = false;
+  toast('Senha atualizada!');
+  TELA = 'app';
+  render();
 }
 
 document.addEventListener('DOMContentLoaded', iniciarSessao);

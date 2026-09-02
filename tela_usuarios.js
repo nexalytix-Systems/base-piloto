@@ -174,7 +174,7 @@ function abrirFormUsuario(){
   if(!souAdminOrganizacao()){ toast('Só o administrador da organização cria usuários.'); return; }
   var html = '<div class="modalBg" onclick="if(event.target===this)fecharModal()"><div class="modal">'+
    '<h2>Novo usuário</h2>'+
-   '<p class="hint">A pessoa recebe um e-mail de convite e define a própria senha — ninguém mais precisa digitar senha por ela.</p>'+
+   '<p class="hint">A pessoa recebe uma senha temporária por e-mail e é obrigada a trocar por uma senha própria no primeiro acesso.</p>'+
    '<div class="fld"><label>Nome *</label><input id="usNome"></div>'+
    '<div class="fld"><label>E-mail *</label><input id="usEmail" type="email"></div>'+
    '<div class="fld"><label>Cargo *</label><select id="usCargo">'+
@@ -191,7 +191,7 @@ function abrirFormUsuario(){
    '</select></div>'+
    '<div class="modalActions">'+
     '<button class="btn2" onclick="fecharModal()">Cancelar</button>'+
-    '<button class="btn" onclick="salvarUsuario()">Enviar convite</button>'+
+    '<button class="btn" onclick="salvarUsuario()">Criar acesso</button>'+
    '</div></div></div>';
   document.body.insertAdjacentHTML('beforeend', html);
 }
@@ -216,7 +216,7 @@ async function salvarUsuario(){
       headers: { 'Content-Type':'application/json', 'Authorization':'Bearer '+SESSAO.token, 'apikey':CFG.chave },
       body: JSON.stringify({
         nome:nome, email:email, cargo:cargo, unidades:unidades, perfil_id:perfilId,
-        redirect_to: CFG.siteUrl || (window.location.origin + window.location.pathname)
+        link_login: CFG.siteUrl || (window.location.origin + window.location.pathname)
       })
     });
   }catch(e){
@@ -225,9 +225,10 @@ async function salvarUsuario(){
   }
   var j = {};
   try{ j = await r.json(); }catch(e){}
-  if(!r.ok){ toast('Não consegui enviar o convite: '+(j.erro||'falha')); return; }
+  if(!r.ok){ toast('Não consegui criar o acesso: '+(j.erro||'falha')); return; }
+  if(j.aviso){ toast(j.aviso); fecharModal(); renderUsuarios(); return; }
 
   fecharModal();
-  toast('Convite enviado — a pessoa recebe um e-mail pra definir a própria senha.');
+  toast('Usuário criado — a senha temporária foi enviada por e-mail.');
   renderUsuarios();
 }
