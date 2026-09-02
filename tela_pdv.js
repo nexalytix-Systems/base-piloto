@@ -3,10 +3,13 @@
    ========================================================== */
 var CARRINHO = [];
 var CACHE_FORMAS_PAG = [];
+var CACHE_CLIENTES_PDV = [];
 
 async function renderPDV(){
   await carregarCatalogo();
   var cli = cliente();
+  var { data: clientes } = await cli.from('clientes').select('*').order('nome');
+  CACHE_CLIENTES_PDV = clientes || [];
   var { data: formas } = await cli.from('formas_pagamento').select('*').eq('ativa', true);
   CACHE_FORMAS_PAG = formas || [];
   if(!CACHE_FORMAS_PAG.length){
@@ -52,26 +55,63 @@ function addCarrinho(itemId){
 }
 function tirarCarrinho(i){ CARRINHO.splice(i,1); desenharPDV(); }
 
+var CUPOM_APLICADO = null;
 function abrirPagamento(){
   var total = CARRINHO.reduce(function(s,i){return s+i.total},0);
+  CUPOM_APLICADO = null;
   var html = '<div class="modalBg" onclick="if(event.target===this)fecharModal()"><div class="modal">'+
-   '<h2>Finalizar venda — R$ '+money(total)+'</h2>'+
-   '<div class="fld"><label>Cliente (opcional)</label><input id="vdCliente" placeholder="Nome do cliente"></div>'+
+   '<h2>Finalizar venda</h2>'+
+   '<div class="fld"><label>Cliente (opcional)</label><select id="vdCliente">'+
+    '<option value="">Sem cliente identificado</option>'+
+    (CACHE_CLIENTES_PDV||[]).filter(function(c){return c.ativo!==false}).map(function(c){
+      return '<option value="'+c.id+'">'+E(c.nome)+'</option>';
+    }).join('')+
+   '</select></div>'+
+   '<div class="fld"><label>Cupom de desconto (opcional)</label>'+
+    '<div style="display:flex;gap:8px">'+
+     '<input id="vdCupom" placeholder="Código" style="text-transform:uppercase">'+
+     '<button class="btn2" onclick="aplicarCupomPdv()">Aplicar</button>'+
+    '</div><div id="vdCupomMsg" style="font-size:12.5px;color:var(--tx2);margin-top:4px"></div></div>'+
    '<div class="fld"><label>Forma de pagamento *</label><select id="vdForma">'+
     CACHE_FORMAS_PAG.map(function(f){return '<option value="'+f.id+'">'+E(f.nome)+'</option>';}).join('')+
    '</select></div>'+
+   '<div class="totalBar"><span>Total</span><span id="vdTotalFinal">R$ '+money(total)+'</span></div>'+
    '<div class="modalActions">'+
     '<button class="btn2" onclick="fecharModal()">Cancelar</button>'+
     '<button class="btn" onclick="confirmarVenda()">Confirmar</button>'+
    '</div></div></div>';
   document.body.insertAdjacentHTML('beforeend', html);
 }
+async function aplicarCupomPdv(){
+  var codigo = $('vdCupom').value.trim().toUpperCase();
+  if(!codigo){ return; }
+  var cli = cliente();
+  var { data: cupom } = await cli.from('cupons').select('*').ilike('codigo', codigo).maybeSingle();
+  var msg = $('vdCupomMsg');
+  var subtotal = CARRINHO.reduce(function(s,i){return s+i.total},0);
+  if(!cupom || cupom.ativo===false){ msg.textContent='Cupom não encontrado ou inativo.'; msg.style.color='var(--err)'; CUPOM_APLICADO=null; }
+  else if(cupom.validade && cupom.validade < new Date().toISOString().slice(0,10)){ msg.textContent='Cupom vencido.'; msg.style.color='var(--err)'; CUPOM_APLICADO=null; }
+  else if(cupom.limite_uso && cupom.usado>=cupom.limite_uso){ msg.textContent='Cupom já atingiu o limite de uso.'; msg.style.color='var(--err)'; CUPOM_APLICADO=null; }
+  else{
+    var desconto = cupom.tipo==='percentual' ? subtotal*(Number(cupom.valor)/100) : Number(cupom.valor);
+    if(desconto>subtotal) desconto=subtotal;
+    CUPOM_APLICADO = { id:cupom.id, desconto:desconto };
+    msg.textContent='Cupom aplicado: -R$ '+money(desconto);
+    msg.style.color='var(--ok)';
+  }
+  var totalFinal = subtotal - (CUPOM_APLICADO?CUPOM_APLICADO.desconto:0);
+  $('vdTotalFinal').textContent = 'R$ '+money(totalFinal);
+}
 async function confirmarVenda(){
   var cli = cliente();
-  var total = CARRINHO.reduce(function(s,i){return s+i.total},0);
+  var subtotal = CARRINHO.reduce(function(s,i){return s+i.total},0);
+  var desconto = CUPOM_APLICADO ? CUPOM_APLICADO.desconto : 0;
+  var total = subtotal - desconto;
   var { data: venda, error: e1 } = await cli.from('vendas').insert({
     unidade_id: SESSAO.unidadeAtual.id, origem:'pdv', situacao:'concluida',
-    cliente_nome: $('vdCliente').value.trim()||null, subtotal: total, total: total,
+    cliente_id: $('vdCliente').value || null,
+    cupom_id: CUPOM_APLICADO ? CUPOM_APLICADO.id : null,
+    subtotal: subtotal, desconto: desconto, total: total,
     concluida_em: new Date().toISOString(), ref_local: uidLocal('venda')
   }).select().single();
   if(e1){ toast('Não consegui gravar a venda: '+e1.message); return; }
@@ -89,6 +129,7 @@ async function confirmarVenda(){
   if(e3){ toast('Venda gravada, mas o pagamento falhou: '+e3.message); return; }
 
   CARRINHO = [];
+  CUPOM_APLICADO = null;
   fecharModal();
   toast('Venda concluída — R$ '+money(total));
   desenharPDV();

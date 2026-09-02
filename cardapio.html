@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cardápio</title>
+<script src="supabase.js"></script>
+<style>
+:root{
+  --bg:#0f1115; --bg2:#161920; --card:#1b1f28; --line:#2a2f3a;
+  --tx:#e8eaed; --tx2:#9aa0ac; --acc:#2450e0; --acc-d:#1c3fb8;
+  --ok:#2fbf71; --err:#e5484d;
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);min-height:100vh;padding-bottom:90px}
+button{font-family:inherit;cursor:pointer;border:none;border-radius:8px;padding:10px 16px;font-size:14px}
+.btn{background:var(--acc);color:#fff}
+.btn2{background:var(--card);color:var(--tx);border:1px solid var(--line)}
+input,select,textarea{font-family:inherit;background:var(--bg2);border:1px solid var(--line);color:var(--tx);
+  border-radius:8px;padding:9px 12px;font-size:14px;width:100%}
+label{font-size:12.5px;color:var(--tx2);display:block;margin-bottom:4px}
+.fld{margin-bottom:14px}
+.topo{padding:20px;text-align:center;border-bottom:1px solid var(--line)}
+.wrap{max-width:560px;margin:0 auto;padding:16px}
+.item{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px;
+  margin-bottom:10px;display:flex;justify-content:space-between;align-items:center;gap:10px}
+.item b{display:block}
+.item span{color:var(--tx2);font-size:13px}
+.barraFixa{position:fixed;bottom:0;left:0;right:0;background:var(--bg2);border-top:1px solid var(--line);
+  padding:14px 16px;display:flex;justify-content:space-between;align-items:center}
+.modalBg{position:fixed;inset:0;background:rgba(0,0,0,.6);display:flex;align-items:center;
+  justify-content:center;z-index:500;padding:20px}
+.modal{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:24px;
+  width:100%;max-width:420px;max-height:88vh;overflow:auto}
+.centro{min-height:70vh;display:flex;align-items:center;justify-content:center;text-align:center;padding:20px}
+.toast{position:fixed;bottom:100px;left:50%;transform:translateX(-50%);background:var(--card);
+  border:1px solid var(--line);padding:12px 20px;border-radius:10px;font-size:14px;z-index:999;
+  opacity:0;transition:opacity .2s;pointer-events:none}
+.toast.on{opacity:1}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<div id="toast" class="toast"></div>
+<script>
+/* ==========================================================
+   CARDÁPIO PÚBLICO — sem login, sem sessão. Fala com o banco
+   só através das funções cardapio_publico() e criar_pedido_publico(),
+   que já cuidam de mostrar apenas o que é dessa unidade.
+   ========================================================== */
+var CFG = { url: 'https://jtlcfodyscxqhdzfrcwi.supabase.co', chave: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imp0bGNmb2R5c2N4cWhkemZyY3dpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODgxOTUyODgsImV4cCI6MjEwMzc3MTI4OH0.0ZoUatyN3JTJoisogeBoN7l9qkMDFQ6oREUnuJg-qsI' }; // mesma URL/chave do app principal
+
+var SB = null;
+function cliente(){ if(!SB) SB = window.supabase.createClient(CFG.url, CFG.chave); return SB; }
+function $(id){ return document.getElementById(id); }
+function E(s){ return String(s==null?'':s).replace(/[&<>"']/g, function(c){
+  return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];
+}); }
+function money(v){ return Number(v||0).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2}); }
+var _toastT=null;
+function toast(msg){ var el=$('toast'); el.textContent=msg; el.classList.add('on');
+  clearTimeout(_toastT); _toastT=setTimeout(function(){el.classList.remove('on')},3200); }
+
+var UNIDADE_ID = new URLSearchParams(window.location.search).get('loja');
+var CARDAPIO = null;
+var CARRINHO = [];
+
+async function iniciar(){
+  if(!CFG.url||!CFG.chave){
+    $('app').innerHTML = '<div class="centro"><div><h2>Falta configurar</h2>'+
+     '<p>Preencha CFG.url e CFG.chave no topo deste arquivo.</p></div></div>';
+    return;
+  }
+  if(!UNIDADE_ID){
+    $('app').innerHTML = '<div class="centro"><div><h2>Link incompleto</h2>'+
+     '<p>Esse link precisa vir com ?loja=... no final — peça o link certo pro estabelecimento.</p></div></div>';
+    return;
+  }
+  try{
+    var cli = cliente();
+    var { data, error } = await cli.rpc('cardapio_publico', { p_unidade_id: UNIDADE_ID });
+    if(error) throw error;
+    if(!data || !data.unidade){
+      $('app').innerHTML = '<div class="centro"><div><h2>Loja não encontrada</h2>'+
+       '<p>Esse link não corresponde a nenhuma loja ativa.</p></div></div>';
+      return;
+    }
+    CARDAPIO = data;
+    render();
+  }catch(e){
+    $('app').innerHTML = '<div class="centro"><div><h2>Não consegui carregar</h2>'+
+     '<p>'+E((e&&e.message)||'erro desconhecido')+'</p></div></div>';
+  }
+}
+
+function render(){
+  var html = '<div class="topo"><h1 style="margin:0 0 4px">'+E(CARDAPIO.unidade.nome)+'</h1>'+
+   '<p style="color:var(--tx2);margin:0">Escolha os itens e monte seu pedido</p></div>'+
+   '<div class="wrap">'+
+   CARDAPIO.itens.map(function(it){
+     return '<div class="item"><div><b>'+E(it.nome)+'</b><span>R$ '+money(it.preco)+'</span></div>'+
+      '<button class="btn2" onclick="addCarrinho(\''+it.id+'\')">Adicionar</button></div>';
+   }).join('')+
+   (!CARDAPIO.itens.length?'<p style="color:var(--tx2);text-align:center">Nenhum item disponível no momento.</p>':'')+
+   '</div>'+
+   (CARRINHO.length?('<div class="barraFixa"><span>'+CARRINHO.length+' item(ns) — R$ '+
+     money(CARRINHO.reduce(function(s,c){return s+c.preco*c.quantidade},0))+'</span>'+
+     '<button class="btn" onclick="abrirFinalizar()">Ver pedido</button></div>'):'');
+  $('app').innerHTML = html;
+}
+function addCarrinho(itemId){
+  var it = CARDAPIO.itens.find(function(x){return x.id===itemId});
+  if(!it) return;
+  var existente = CARRINHO.find(function(c){return c.id===itemId});
+  if(existente) existente.quantidade++;
+  else CARRINHO.push({ id:itemId, nome:it.nome, preco:it.preco, quantidade:1 });
+  toast(it.nome+' adicionado.');
+  render();
+}
+function abrirFinalizar(){
+  var total = CARRINHO.reduce(function(s,c){return s+c.preco*c.quantidade},0);
+  var html = '<div class="modalBg" onclick="if(event.target===this)fecharModal()"><div class="modal">'+
+   '<h2>Seu pedido</h2>'+
+   CARRINHO.map(function(c,i){
+     return '<div class="item"><div><b>'+E(c.nome)+'</b><span>x'+c.quantidade+' — R$ '+money(c.preco*c.quantidade)+'</span></div>'+
+      '<button class="btn2" onclick="tirarCarrinho('+i+')">remover</button></div>';
+   }).join('')+
+   '<div style="display:flex;justify-content:space-between;font-weight:600;font-size:17px;padding:14px 0;border-top:1px solid var(--line);margin-top:10px">'+
+    '<span>Total</span><span>R$ '+money(total)+'</span></div>'+
+   (CARDAPIO.mesas.length?
+    '<div class="fld"><label>Mesa (se estiver no local)</label><select id="pdMesa">'+
+     '<option value="">Vou levar / retirar</option>'+
+     CARDAPIO.mesas.map(function(m){return '<option value="'+m.id+'">Mesa '+E(m.numero)+'</option>';}).join('')+
+    '</select></div>':'')+
+   '<div class="fld"><label>Seu nome *</label><input id="pdNome"></div>'+
+   '<div class="fld"><label>Telefone</label><input id="pdTelefone"></div>'+
+   '<div class="fld"><label>Observação</label><textarea id="pdObs" rows="2"></textarea></div>'+
+   '<button class="btn" style="width:100%" onclick="enviarPedido()">Confirmar pedido</button>'+
+   '</div></div>';
+  document.body.insertAdjacentHTML('beforeend', html);
+}
+function tirarCarrinho(i){ CARRINHO.splice(i,1); fecharModal(); render(); if(CARRINHO.length) abrirFinalizar(); }
+function fecharModal(){ var bg=document.querySelector('.modalBg'); if(bg) bg.remove(); }
+
+async function enviarPedido(){
+  var nome = $('pdNome').value.trim();
+  if(!nome){ toast('Informe seu nome.'); return; }
+  var mesaEl = $('pdMesa');
+  var cli = cliente();
+  try{
+    var { data, error } = await cli.rpc('criar_pedido_publico', {
+      p_unidade_id: UNIDADE_ID,
+      p_origem: mesaEl && mesaEl.value ? 'mesa' : 'cardapio',
+      p_mesa_id: mesaEl ? (mesaEl.value || null) : null,
+      p_cliente_nome: nome,
+      p_cliente_telefone: $('pdTelefone').value.trim() || null,
+      p_observacao: $('pdObs').value.trim() || null,
+      p_itens: CARRINHO.map(function(c){ return { item_catalogo_id: c.id, quantidade: c.quantidade }; })
+    });
+    if(error) throw error;
+    CARRINHO = [];
+    fecharModal();
+    $('app').innerHTML = '<div class="centro"><div><h2>Pedido enviado!</h2>'+
+     '<p>O estabelecimento já recebeu seu pedido. Aguarde a confirmação.</p></div></div>';
+  }catch(e){
+    toast('Não consegui enviar: '+((e&&e.message)||'erro desconhecido'));
+  }
+}
+document.addEventListener('DOMContentLoaded', iniciar);
+</script>
+</body>
+</html>

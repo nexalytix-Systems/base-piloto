@@ -1,8 +1,14 @@
 /* ==========================================================
-   UNIDADES — lista simples + trocar a unidade atual
+   UNIDADES — lista simples + trocar a unidade atual + módulos
+   opcionais da organização (só admin vê essa segunda parte)
    ========================================================== */
+var MODULOS_OPCIONAIS = [
+  {id:'producao', nome:'Produção (Insumos e Fichas Técnicas)', descricao:'pra quem fabrica o próprio produto — receita, custo por insumo'},
+  {id:'cardapio', nome:'Cardápio Digital, Mesas e Totem', descricao:'link público sem login pro cliente pedir sozinho — específico de alimentação'}
+];
 function renderUnidades(){
   var admin = souAdminOrganizacao();
+  var mods = (SESSAO.organizacao && SESSAO.organizacao.modulos_contratados) || [];
   var html = '<div class="card">'+
    '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">'+
     '<h2 style="margin:0">Unidades</h2>'+
@@ -20,8 +26,31 @@ function renderUnidades(){
         :'<button class="btn2" onclick="trocarUnidade(\''+u.id+'\')">Usar esta</button>')+'</td></tr>';
    }).join('')+
    (!SESSAO.unidades.length?'<tr><td colspan="4" style="color:var(--tx2)">Você não está vinculado a nenhuma unidade ainda — peça pro administrador liberar.</td></tr>':'')+
-   '</tbody></table></div>';
+   '</tbody></table></div>'+
+   (admin?('<div class="card" style="margin-top:16px">'+
+    '<h2 style="margin:0 0 6px">Módulos opcionais</h2>'+
+    '<p class="hint">Ligue só o que faz sentido pro seu negócio — não aparece no menu de ninguém até ligar aqui.</p>'+
+    MODULOS_OPCIONAIS.map(function(m){
+      var ligado = mods.indexOf(m.id)>=0;
+      return '<label style="display:flex;gap:10px;align-items:flex-start;padding:10px 0;border-bottom:1px solid var(--line)">'+
+       '<input type="checkbox" '+(ligado?'checked':'')+' style="width:auto;margin-top:3px" '+
+       'onchange="alternarModuloOrganizacao(\''+m.id+'\',this.checked)">'+
+       '<span><b style="display:block">'+E(m.nome)+'</b>'+
+       '<span style="color:var(--tx2);font-size:12.5px">'+E(m.descricao)+'</span></span></label>';
+    }).join('')+
+   '</div>'):'');
   $('miolo').innerHTML = html;
+}
+async function alternarModuloOrganizacao(moduloId, ligar){
+  var cli = cliente();
+  var atuais = (SESSAO.organizacao.modulos_contratados||[]).slice();
+  if(ligar && atuais.indexOf(moduloId)<0) atuais.push(moduloId);
+  if(!ligar) atuais = atuais.filter(function(m){return m!==moduloId});
+  var r = await cli.from('organizacoes').update({ modulos_contratados: atuais }).eq('id', SESSAO.organizacao.id);
+  if(r.error){ toast('Não consegui atualizar: '+r.error.message); return; }
+  SESSAO.organizacao.modulos_contratados = atuais;
+  toast(ligar ? 'Módulo ligado.' : 'Módulo desligado.');
+  renderApp();
 }
 function trocarUnidade(id){
   SESSAO.unidadeAtual = SESSAO.unidades.find(function(u){return u.id===id});

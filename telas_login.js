@@ -97,7 +97,7 @@ async function onCriarOrganizacao(){
 
   var { data: perfilAdmin } = await cli.from('perfis_acesso').insert({
     organizacao_id: org.id, nome:'Administrador',
-    telas_permitidas:['pdv','agenda','catalogo','financeiro','estoque','relatorios','profissionais','unidades','usuarios','perfis']
+    telas_permitidas:['pdv','agenda','catalogo','financeiro','estoque','producao','clientes','cardapio','relatorios','profissionais','unidades','usuarios','perfis']
   }).select().single();
   await cli.from('perfis_acesso').insert({
     organizacao_id: org.id, nome:'Operador',

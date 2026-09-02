@@ -40,6 +40,15 @@ function montarItensMenu(){
     {id:'contagem',rotulo:'Contagem'},{id:'transferencia',rotulo:'Transferência'},
     {id:'fornecedores',rotulo:'Fornecedores'},{id:'motivos',rotulo:'Motivos'}
   ]});
+  if(mods.indexOf('producao')>=0&&libera('producao')) itens.push({id:'producao', rotulo:'Produção', icone:'estoque', filho:'ABA_PROD', ir:'irParaProd', sub:[
+    {id:'insumos',rotulo:'Insumos'},{id:'fichas',rotulo:'Fichas Técnicas'},{id:'unidadesmedida',rotulo:'Unidades de Medida'}
+  ]});
+  if(libera('clientes')) itens.push({id:'clientes', rotulo:'Clientes', icone:'usuarios', filho:'ABA_CLI', ir:'irParaCli', sub:[
+    {id:'clientes',rotulo:'Clientes'},{id:'cupons',rotulo:'Cupons'}
+  ]});
+  if(mods.indexOf('cardapio')>=0&&libera('cardapio')) itens.push({id:'cardapio', rotulo:'Cardápio Digital', icone:'catalogo', filho:'ABA_CARD', ir:'irParaCard', sub:[
+    {id:'pedidos',rotulo:'Pedidos Recebidos'},{id:'mesas',rotulo:'Mesas'},{id:'link',rotulo:'Link do Cardápio'}
+  ]});
   if(libera('relatorios')) itens.push({id:'relatorios', rotulo:'Relatórios', icone:'relatorios', filho:'ABA_REL', ir:'irParaRel', sub:[
     {id:'dashboard',rotulo:'Dashboard'},{id:'faturamento',rotulo:'Faturamento'},
     {id:'itens',rotulo:'Itens Mais Vendidos'},{id:'cancelamentos',rotulo:'Cancelamentos'},{id:'dre',rotulo:'DRE'}
@@ -98,6 +107,9 @@ function renderMiolo(){
   if(ABA_MOD==='catalogo') return renderCatalogo();
   if(ABA_MOD==='financeiro') return renderFinanceiro();
   if(ABA_MOD==='estoque') return renderEstoque();
+  if(ABA_MOD==='producao') return renderProducao();
+  if(ABA_MOD==='clientes') return renderClientes();
+  if(ABA_MOD==='cardapio') return renderCardapioAdmin();
   if(ABA_MOD==='relatorios') return renderRelatorios();
   if(ABA_MOD==='usuarios') return renderUsuarios();
   if(ABA_MOD==='perfis') return renderPerfis();
