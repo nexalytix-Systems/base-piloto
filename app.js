@@ -4,7 +4,11 @@
    ========================================================== */
 var CFG = {
   url: 'https://jtlcfodyscxqhdzfrcwi.supabase.co',      // preencha com a URL do seu projeto Supabase antes de publicar
-  chave: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imp0bGNmb2R5c2N4cWhkemZyY3dpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODgxOTUyODgsImV4cCI6MjEwMzc3MTI4OH0.0ZoUatyN3JTJoisogeBoN7l9qkMDFQ6oREUnuJg-qsI'     // chave anon/publishable
+  chave: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imp0bGNmb2R5c2N4cWhkemZyY3dpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODgxOTUyODgsImV4cCI6MjEwMzc3MTI4OH0.0ZoUatyN3JTJoisogeBoN7l9qkMDFQ6oREUnuJg-qsI',    // chave anon/publishable
+  siteUrl: 'https://nexalytix-systems.github.io/base-piloto/'   // preencha com o endereço FIXO onde o Wirtu está publicado
+                // (ex.: 'https://nexalytix-systems.github.io/base-piloto/')
+                // — usado nos links de convite/redefinição de senha, pra não
+                // depender de onde o admin estava quando clicou o botão
 };
 
 var SB = null;           // cliente Supabase
@@ -53,10 +57,12 @@ async function iniciarSessao(){
   catch(e){ renderErroConfig(); return; }
   try{
     /* convite/recuperação de senha chegam com informação no hash da URL
-       (#access_token=...&type=invite ou type=recovery) — precisa checar
-       ANTES de decidir a tela normal, senão a pessoa cai direto no
-       sistema sem nunca ter definido a própria senha. */
-    var tipoLink = (window.location.hash.match(/type=([a-z]+)/)||[])[1];
+       (#access_token=...&type=invite) OU na query string (?code=...&type=invite),
+       dependendo do fluxo de autenticação que o projeto usa — precisa checar
+       os dois formatos, ANTES de decidir a tela normal, senão a pessoa cai
+       direto no sistema sem nunca ter definido a própria senha. */
+    var tipoLink = (window.location.hash.match(/type=([a-z]+)/)||[])[1]
+      || (window.location.search.match(/type=([a-z]+)/)||[])[1];
 
     var { data } = await cli.auth.getSession();
     if(data && data.session){

@@ -216,7 +216,7 @@ async function salvarUsuario(){
       headers: { 'Content-Type':'application/json', 'Authorization':'Bearer '+SESSAO.token, 'apikey':CFG.chave },
       body: JSON.stringify({
         nome:nome, email:email, cargo:cargo, unidades:unidades, perfil_id:perfilId,
-        redirect_to: window.location.origin + window.location.pathname
+        redirect_to: CFG.siteUrl || (window.location.origin + window.location.pathname)
       })
     });
   }catch(e){
