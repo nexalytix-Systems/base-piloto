@@ -109,11 +109,17 @@ function abrirRedefinirSenha(id, nome){
 async function confirmarRedefinirSenha(id){
   var senha = $('rsSenha').value;
   if(!senha||senha.length<6){ toast('A senha precisa ter ao menos 6 caracteres.'); return; }
-  var r = await fetch(CFG.url+'/functions/v1/redefinir-senha', {
-    method:'POST',
-    headers: { 'Content-Type':'application/json', 'Authorization':'Bearer '+SESSAO.token, 'apikey':CFG.chave },
-    body: JSON.stringify({ pessoa_id:id, nova_senha:senha })
-  });
+  var r;
+  try{
+    r = await fetch(CFG.url+'/functions/v1/redefinir-senha', {
+      method:'POST',
+      headers: { 'Content-Type':'application/json', 'Authorization':'Bearer '+SESSAO.token, 'apikey':CFG.chave },
+      body: JSON.stringify({ pessoa_id:id, nova_senha:senha })
+    });
+  }catch(e){
+    toast('Não consegui falar com o servidor. Confira o Console (F12) — detalhe: '+((e&&e.message)||'erro de rede'));
+    return;
+  }
   var j = {};
   try{ j = await r.json(); }catch(e){}
   if(!r.ok){ toast('Não consegui redefinir: '+(j.erro||'falha')); return; }
@@ -203,14 +209,20 @@ async function salvarUsuario(){
   if(!unidades.length){ toast('Marque ao menos uma unidade.'); return; }
   if(!perfilId){ toast('Selecione o perfil de acesso.'); return; }
 
-  var r = await fetch(CFG.url+'/functions/v1/criar-pessoa', {
-    method:'POST',
-    headers: { 'Content-Type':'application/json', 'Authorization':'Bearer '+SESSAO.token, 'apikey':CFG.chave },
-    body: JSON.stringify({
-      nome:nome, email:email, cargo:cargo, unidades:unidades, perfil_id:perfilId,
-      redirect_to: window.location.origin + window.location.pathname
-    })
-  });
+  var r;
+  try{
+    r = await fetch(CFG.url+'/functions/v1/criar-pessoa', {
+      method:'POST',
+      headers: { 'Content-Type':'application/json', 'Authorization':'Bearer '+SESSAO.token, 'apikey':CFG.chave },
+      body: JSON.stringify({
+        nome:nome, email:email, cargo:cargo, unidades:unidades, perfil_id:perfilId,
+        redirect_to: window.location.origin + window.location.pathname
+      })
+    });
+  }catch(e){
+    toast('Não consegui falar com o servidor. Confira o Console (F12) — detalhe: '+((e&&e.message)||'erro de rede'));
+    return;
+  }
   var j = {};
   try{ j = await r.json(); }catch(e){}
   if(!r.ok){ toast('Não consegui enviar o convite: '+(j.erro||'falha')); return; }
