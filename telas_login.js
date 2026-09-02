@@ -72,6 +72,7 @@ async function onCriarOrganizacao(){
   var cli = cliente();
   var { data: sessao } = await cli.auth.getSession();
   var userId = sessao.session.user.id;
+  var userEmail = sessao.session.user.email;
 
   var { data: org, error: e1 } = await cli.from('organizacoes').insert({
     nome:nome, tipo_relacao:$('bsTipoRelacao').value, segmento:$('bsSegmento').value,
@@ -84,8 +85,19 @@ async function onCriarOrganizacao(){
      passam a valer pela regra normal (organizacao_id = minha_organizacao()),
      sem precisar de mais nenhuma exceção de bootstrap no banco. */
   var { error: e3 } = await cli.from('pessoas').insert({
-    id:userId, organizacao_id:org.id, unidade_id:null, nome:'Administrador', cargo:'admin_organizacao'
+    id:userId, organizacao_id:org.id, unidade_id:null, nome:'Administrador', cargo:'admin_organizacao',
+    email: userEmail, usuario: userEmail ? userEmail.split('@')[0] : null
   });
+  if(e3 && e3.message && e3.message.indexOf('uq_pessoas_usuario')>=0){
+    /* o usuário derivado do e-mail (ex.: "admin") já está em uso por
+       outra organização — cai pra sem usuário, ainda funciona pra
+       entrar pelo e-mail completo. */
+    var r2 = await cli.from('pessoas').insert({
+      id:userId, organizacao_id:org.id, unidade_id:null, nome:'Administrador', cargo:'admin_organizacao',
+      email: userEmail
+    });
+    e3 = r2.error;
+  }
   if(e3){ toast('Não consegui vincular seu usuário: '+e3.message); return; }
 
   /* Insert sem .select() de propósito: a política de "unidades" olha
