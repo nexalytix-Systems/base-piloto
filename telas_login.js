@@ -10,8 +10,8 @@ function renderLogin(){
      '<div style="font-size:13px;color:var(--tx2)">a virtude da gestão simples</div>'+
     '</div>'+
     '<div class="card">'+
-    '<h1>Entrar</h1><p class="hint">Acesse com seu e-mail e senha.</p>'+
-    '<div class="fld"><label>E-mail</label><input id="lgEmail" type="email"></div>'+
+    '<h1>Entrar</h1><p class="hint">Acesse com seu usuário e senha.</p>'+
+    '<div class="fld"><label>Usuário</label><input id="lgUsuario" autocapitalize="off" autocorrect="off"></div>'+
     '<div class="fld"><label>Senha</label><input id="lgSenha" type="password"></div>'+
     '<button class="btn" style="width:100%" onclick="onClickLogin()">Entrar</button>'+
     '<p class="hint" style="margin-top:16px">Sem conta ainda? Peça pro administrador da sua organização '+
@@ -20,10 +20,14 @@ function renderLogin(){
    '</div></div></div>';
   $('lgSenha').addEventListener('keydown', function(e){ if(e.key==='Enter') onClickLogin(); });
 }
-function onClickLogin(){
-  var email = $('lgEmail').value.trim();
+async function onClickLogin(){
+  var usuario = $('lgUsuario').value.trim();
   var senha = $('lgSenha').value;
-  if(!email||!senha){ toast('Preencha e-mail e senha.'); return; }
+  if(!usuario||!senha){ toast('Preencha usuário e senha.'); return; }
+  var cli = cliente();
+  var { data: email, error } = await cli.rpc('resolver_email_por_usuario', { p_usuario: usuario });
+  if(error){ toast('Não consegui verificar: '+error.message); return; }
+  if(!email){ toast('Usuário ou senha incorretos.'); return; }
   fazerLogin(email, senha);
 }
 

@@ -46,10 +46,12 @@ function desenharUsuarios(){
         ?'<span style="color:var(--tx2)">organização inteira</span>'
         :E(nomesUn.join(', ')||'nenhuma'))+'</td>'+
       '<td><span class="pill '+(p.ativo!==false?'ok':'err')+'">'+(p.ativo!==false?'Ativo':'Inativo')+'</span></td>'+
-      (admin?('<td><div style="display:flex;gap:6px">'+
+      (admin?('<td><div style="display:flex;gap:6px;flex-wrap:wrap">'+
        '<button class="btn2" onclick="abrirEditarUsuario(\''+p.id+'\')">Editar</button>'+
        (souEu?'':'<button class="btn2" onclick="alternarAtivoUsuario(\''+p.id+'\')">'+
          (p.ativo!==false?'Desativar':'Ativar')+'</button>')+
+       (souEu?'':'<button class="btn2" onclick="reenviarSenhaTemporaria(\''+p.id+'\',\''+E(p.nome).replace(/'/g,"\\'")+'\')">Reenviar senha</button>')+
+       (souEu?'':'<button class="btn2" style="color:var(--err)" onclick="excluirUsuario(\''+p.id+'\',\''+E(p.nome).replace(/'/g,"\\'")+'\')">Excluir</button>')+
       '</div></td>'):'')+'</tr>';
    }).join('')+
    '</tbody></table></div>';
@@ -165,6 +167,44 @@ async function alternarAtivoUsuario(id){
   toast(p.ativo===false ? 'Usuário reativado.' : 'Usuário desativado — ele não consegue mais entrar.');
   renderUsuarios();
 }
+async function reenviarSenhaTemporaria(id, nome){
+  if(!confirm('Gerar uma nova senha temporária pra '+nome+' e mandar por e-mail?')){ return; }
+  var r;
+  try{
+    r = await fetch(CFG.url+'/functions/v1/reenviar-senha-temporaria', {
+      method:'POST',
+      headers: { 'Content-Type':'application/json', 'Authorization':'Bearer '+SESSAO.token, 'apikey':CFG.chave },
+      body: JSON.stringify({ pessoa_id:id, link_login: CFG.siteUrl || (window.location.origin + window.location.pathname) })
+    });
+  }catch(e){
+    toast('Não consegui falar com o servidor. Confira o Console (F12) — detalhe: '+((e&&e.message)||'erro de rede'));
+    return;
+  }
+  var j = {};
+  try{ j = await r.json(); }catch(e){}
+  if(!r.ok){ toast('Não consegui reenviar: '+(j.erro||'falha')); return; }
+  toast(j.aviso || 'Nova senha temporária enviada por e-mail.');
+  renderUsuarios();
+}
+async function excluirUsuario(id, nome){
+  if(!confirm('Excluir '+nome+' de vez? Essa ação não pode ser desfeita — o acesso e o histórico de quem criou/editou coisas ligadas a essa pessoa continuam existindo, mas o login dela é apagado.')){ return; }
+  var r;
+  try{
+    r = await fetch(CFG.url+'/functions/v1/excluir-pessoa', {
+      method:'POST',
+      headers: { 'Content-Type':'application/json', 'Authorization':'Bearer '+SESSAO.token, 'apikey':CFG.chave },
+      body: JSON.stringify({ pessoa_id:id })
+    });
+  }catch(e){
+    toast('Não consegui falar com o servidor. Confira o Console (F12) — detalhe: '+((e&&e.message)||'erro de rede'));
+    return;
+  }
+  var j = {};
+  try{ j = await r.json(); }catch(e){}
+  if(!r.ok){ toast('Não consegui excluir: '+(j.erro||'falha')); return; }
+  toast('Usuário excluído.');
+  renderUsuarios();
+}
 function rotuloCargo(c){
   if(c==='admin_organizacao') return 'Administrador da organização';
   if(c==='admin_unidade') return 'Administrador da unidade';
@@ -176,6 +216,7 @@ function abrirFormUsuario(){
    '<h2>Novo usuário</h2>'+
    '<p class="hint">A pessoa recebe uma senha temporária por e-mail e é obrigada a trocar por uma senha própria no primeiro acesso.</p>'+
    '<div class="fld"><label>Nome *</label><input id="usNome"></div>'+
+   '<div class="fld"><label>Usuário (pra fazer login) *</label><input id="usUsuario" autocapitalize="off"></div>'+
    '<div class="fld"><label>E-mail *</label><input id="usEmail" type="email"></div>'+
    '<div class="fld"><label>Cargo *</label><select id="usCargo">'+
     '<option value="operador">Operador</option>'+
@@ -197,6 +238,7 @@ function abrirFormUsuario(){
 }
 async function salvarUsuario(){
   var nome=$('usNome').value.trim();
+  var usuario=$('usUsuario').value.trim();
   var email=$('usEmail').value.trim();
   var cargo=$('usCargo').value;
   var perfilId=$('usPerfil').value;
@@ -205,6 +247,7 @@ async function salvarUsuario(){
     if(el.checked) unidades.push(el.getAttribute('data-us-un'));
   });
   if(!nome){ toast('Informe o nome.'); return; }
+  if(!usuario||!/^[a-zA-Z0-9._-]{3,}$/.test(usuario)){ toast('Usuário precisa ter ao menos 3 caracteres (letras, números, . _ -).'); return; }
   if(!email||!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)){ toast('Informe um e-mail válido.'); return; }
   if(!unidades.length){ toast('Marque ao menos uma unidade.'); return; }
   if(!perfilId){ toast('Selecione o perfil de acesso.'); return; }
@@ -215,7 +258,7 @@ async function salvarUsuario(){
       method:'POST',
       headers: { 'Content-Type':'application/json', 'Authorization':'Bearer '+SESSAO.token, 'apikey':CFG.chave },
       body: JSON.stringify({
-        nome:nome, email:email, cargo:cargo, unidades:unidades, perfil_id:perfilId,
+        nome:nome, usuario:usuario, email:email, cargo:cargo, unidades:unidades, perfil_id:perfilId,
         link_login: CFG.siteUrl || (window.location.origin + window.location.pathname)
       })
     });

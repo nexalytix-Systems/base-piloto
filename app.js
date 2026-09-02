@@ -73,6 +73,11 @@ async function iniciarSessao(){
         return;
       }
       await carregarPessoa(data.session.user.id);
+      if(SESSAO.desativado){
+        TELA = 'login';
+        render();
+        return;
+      }
       if(SESSAO.pessoa && SESSAO.pessoa.senha_temporaria){
         TELA = 'trocar-senha-obrigatoria';
         render();
@@ -92,9 +97,15 @@ async function iniciarSessao(){
 async function carregarPessoa(userId){
   var cli = cliente();
   var { data: pessoa, error } = await cli.from('pessoas')
-    .select('id,nome,cargo,organizacao_id,unidade_id,ativo,perfil_id')
+    .select('id,nome,cargo,organizacao_id,unidade_id,ativo,perfil_id,senha_temporaria')
     .eq('id', userId).maybeSingle();
   if(error || !pessoa){ SESSAO.pessoa = null; return; }
+  if(pessoa.ativo === false){
+    SESSAO.pessoa = null;
+    SESSAO.desativado = true;
+    await cli.auth.signOut();
+    return;
+  }
   SESSAO.pessoa = pessoa;
 
   var { data: org } = await cli.from('organizacoes').select('*').eq('id', pessoa.organizacao_id).maybeSingle();
@@ -154,11 +165,59 @@ async function fazerLogin(email, senha){
   if(error){ toast('Não consegui entrar: '+error.message); return; }
   SESSAO.token = data.session.access_token;
   await carregarPessoa(data.user.id);
-  if(SESSAO.pessoa && SESSAO.pessoa.senha_temporaria){
-    TELA = 'trocar-senha-obrigatoria';
-  } else {
-    TELA = SESSAO.pessoa ? 'app' : 'bootstrap';
+  if(SESSAO.desativado){
+    toast('Esse usuário foi desativado. Fale com o administrador da organização.');
+    TELA = 'login';
+    render();
+    return;
   }
+  if(!SESSAO.pessoa){
+    TELA = 'bootstrap';
+    render();
+    return;
+  }
+  // segundo fator: só dispara aqui, no login novo — não em toda
+  // vez que a página recarrega com uma sessão já válida.
+  await iniciarMfaEEntrar();
+}
+async function iniciarMfaEEntrar(){
+  var r;
+  try{
+    r = await fetch(CFG.url+'/functions/v1/iniciar-mfa', {
+      method:'POST',
+      headers: { 'Content-Type':'application/json', 'Authorization':'Bearer '+SESSAO.token, 'apikey':CFG.chave }
+    });
+  }catch(e){
+    toast('Não consegui iniciar a verificação. Confira o Console (F12) — detalhe: '+((e&&e.message)||'erro de rede'));
+    return;
+  }
+  var j = {};
+  try{ j = await r.json(); }catch(e){}
+  if(!r.ok){ toast('Não consegui enviar o código: '+(j.erro||'falha')); return; }
+  if(j.aviso) toast(j.aviso);
+  TELA = 'confirmar-mfa';
+  render();
+}
+function renderConfirmarMfa(){
+  $('app').innerHTML =
+   '<div class="centro"><div class="card" style="width:100%;max-width:380px">'+
+    '<h1>Confirme seu acesso</h1>'+
+    '<p class="hint">Mandamos um código de 6 dígitos pro seu e-mail. Digite abaixo pra continuar.</p>'+
+    '<div class="fld"><label>Código</label><input id="mfaCodigo" maxlength="6" inputmode="numeric" '+
+     'style="letter-spacing:6px;font-size:20px;text-align:center"></div>'+
+    '<button class="btn" style="width:100%" onclick="onConfirmarMfa()">Confirmar</button>'+
+    '<button class="btn2" style="width:100%;margin-top:8px" onclick="iniciarMfaEEntrar()">Reenviar código</button>'+
+   '</div></div>';
+  $('mfaCodigo').addEventListener('keydown', function(e){ if(e.key==='Enter') onConfirmarMfa(); });
+}
+async function onConfirmarMfa(){
+  var codigo = $('mfaCodigo').value.trim();
+  if(!codigo){ toast('Digite o código.'); return; }
+  var cli = cliente();
+  var { data: ok, error } = await cli.rpc('confirmar_mfa', { p_codigo: codigo });
+  if(error){ toast('Não consegui confirmar: '+error.message); return; }
+  if(!ok){ toast('Código incorreto ou expirado.'); return; }
+  TELA = SESSAO.pessoa.senha_temporaria ? 'trocar-senha-obrigatoria' : 'app';
   render();
 }
 
@@ -176,6 +235,7 @@ function render(){
   if(TELA==='login') return renderLogin();
   if(TELA==='bootstrap') return renderBootstrap();
   if(TELA==='definir-senha') return renderDefinirSenha();
+  if(TELA==='confirmar-mfa') return renderConfirmarMfa();
   if(TELA==='trocar-senha-obrigatoria') return renderTrocarSenhaObrigatoria();
   return renderApp();
 }
