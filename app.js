@@ -52,9 +52,20 @@ async function iniciarSessao(){
   try{ cli = cliente(); }
   catch(e){ renderErroConfig(); return; }
   try{
+    /* convite/recuperação de senha chegam com informação no hash da URL
+       (#access_token=...&type=invite ou type=recovery) — precisa checar
+       ANTES de decidir a tela normal, senão a pessoa cai direto no
+       sistema sem nunca ter definido a própria senha. */
+    var tipoLink = (window.location.hash.match(/type=([a-z]+)/)||[])[1];
+
     var { data } = await cli.auth.getSession();
     if(data && data.session){
       SESSAO.token = data.session.access_token;
+      if(tipoLink==='invite' || tipoLink==='recovery'){
+        TELA = 'definir-senha';
+        render();
+        return;
+      }
       await carregarPessoa(data.session.user.id);
     }
   }catch(e){
@@ -97,6 +108,35 @@ async function carregarPessoa(userId){
   }
 }
 
+/* ==========================================================
+   TELA — Definir senha (primeiro acesso por convite, ou
+   recuperação de senha esquecida — o link chega do mesmo jeito)
+   ========================================================== */
+function renderDefinirSenha(){
+  $('app').innerHTML =
+   '<div class="centro"><div class="card" style="width:100%;max-width:380px">'+
+    '<h1>Defina sua senha</h1>'+
+    '<p class="hint">Essa é a única vez que você vai ver essa tela — depois é só entrar normalmente com e-mail e senha.</p>'+
+    '<div class="fld"><label>Nova senha</label><input id="dsSenha" type="password" placeholder="mínimo 6 caracteres"></div>'+
+    '<div class="fld"><label>Confirmar senha</label><input id="dsSenha2" type="password"></div>'+
+    '<button class="btn" style="width:100%" onclick="onDefinirSenha()">Salvar e entrar</button>'+
+   '</div></div>';
+}
+async function onDefinirSenha(){
+  var s1 = $('dsSenha').value;
+  var s2 = $('dsSenha2').value;
+  if(!s1||s1.length<6){ toast('A senha precisa ter ao menos 6 caracteres.'); return; }
+  if(s1!==s2){ toast('As senhas não são iguais.'); return; }
+  var cli = cliente();
+  var { data, error } = await cli.auth.updateUser({ password: s1 });
+  if(error){ toast('Não consegui salvar: '+error.message); return; }
+  history.replaceState(null, '', window.location.pathname);
+  await carregarPessoa(data.user.id);
+  TELA = SESSAO.pessoa ? 'app' : 'bootstrap';
+  toast('Senha definida — bem-vindo(a)!');
+  render();
+}
+
 async function fazerLogin(email, senha){
   var cli = cliente();
   var { data, error } = await cli.auth.signInWithPassword({ email: email, password: senha });
@@ -119,6 +159,7 @@ async function sair(){
 function render(){
   if(TELA==='login') return renderLogin();
   if(TELA==='bootstrap') return renderBootstrap();
+  if(TELA==='definir-senha') return renderDefinirSenha();
   return renderApp();
 }
 

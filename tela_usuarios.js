@@ -69,6 +69,9 @@ function abrirEditarUsuario(id){
   var minhasUn = unidadesDaPessoa(id);
   var html = '<div class="modalBg" onclick="if(event.target===this)fecharModal()"><div class="modal">'+
    '<h2>Editar usuário</h2>'+
+   '<div class="fld"><label>E-mail (login)</label>'+
+    '<div style="padding:9px 12px;background:var(--bg2);border:1px solid var(--line);border-radius:8px;color:var(--tx2)">'+
+     E(p.email||'não registrado')+'</div></div>'+
    '<div class="fld"><label>Nome *</label><input id="euNome" value="'+E(p.nome)+'"></div>'+
    '<div class="fld"><label>Cargo *</label><select id="euCargo">'+
     '<option value="operador"'+(p.cargo==='operador'?' selected':'')+'>Operador</option>'+
@@ -84,11 +87,38 @@ function abrirEditarUsuario(id){
       return '<option value="'+x.id+'"'+(p.perfil_id===x.id?' selected':'')+'>'+E(x.nome)+'</option>';
     }).join('')+
    '</select></div>'+
+   '<div class="fld"><label>Senha</label>'+
+    '<button class="btn2" style="width:100%" onclick="abrirRedefinirSenha(\''+id+'\',\''+E(p.nome).replace(/'/g,"\\'")+'\')">Redefinir senha</button></div>'+
    '<div class="modalActions">'+
     '<button class="btn2" onclick="fecharModal()">Cancelar</button>'+
     '<button class="btn" onclick="salvarEdicaoUsuario(\''+id+'\')">Salvar</button>'+
    '</div></div></div>';
   document.body.insertAdjacentHTML('beforeend', html);
+}
+function abrirRedefinirSenha(id, nome){
+  var html = '<div class="modalBg" onclick="if(event.target===this)fecharModal()"><div class="modal">'+
+   '<h2>Redefinir senha — '+E(nome)+'</h2>'+
+   '<p class="hint">A pessoa vai precisar usar essa nova senha no próximo acesso.</p>'+
+   '<div class="fld"><label>Nova senha *</label><input id="rsSenha" type="text" placeholder="mínimo 6 caracteres"></div>'+
+   '<div class="modalActions">'+
+    '<button class="btn2" onclick="fecharModal()">Cancelar</button>'+
+    '<button class="btn" onclick="confirmarRedefinirSenha(\''+id+'\')">Redefinir</button>'+
+   '</div></div></div>';
+  document.body.insertAdjacentHTML('beforeend', html);
+}
+async function confirmarRedefinirSenha(id){
+  var senha = $('rsSenha').value;
+  if(!senha||senha.length<6){ toast('A senha precisa ter ao menos 6 caracteres.'); return; }
+  var r = await fetch(CFG.url+'/functions/v1/redefinir-senha', {
+    method:'POST',
+    headers: { 'Content-Type':'application/json', 'Authorization':'Bearer '+SESSAO.token, 'apikey':CFG.chave },
+    body: JSON.stringify({ pessoa_id:id, nova_senha:senha })
+  });
+  var j = {};
+  try{ j = await r.json(); }catch(e){}
+  if(!r.ok){ toast('Não consegui redefinir: '+(j.erro||'falha')); return; }
+  fecharModal();
+  toast('Senha redefinida.');
 }
 async function salvarEdicaoUsuario(id){
   var nome = $('euNome').value.trim();
@@ -138,11 +168,9 @@ function abrirFormUsuario(){
   if(!souAdminOrganizacao()){ toast('Só o administrador da organização cria usuários.'); return; }
   var html = '<div class="modalBg" onclick="if(event.target===this)fecharModal()"><div class="modal">'+
    '<h2>Novo usuário</h2>'+
+   '<p class="hint">A pessoa recebe um e-mail de convite e define a própria senha — ninguém mais precisa digitar senha por ela.</p>'+
    '<div class="fld"><label>Nome *</label><input id="usNome"></div>'+
-   '<div class="row2">'+
-    '<div class="fld"><label>E-mail (login) *</label><input id="usEmail" type="email"></div>'+
-    '<div class="fld"><label>Senha *</label><input id="usSenha" type="text" placeholder="mín. 6 caracteres"></div>'+
-   '</div>'+
+   '<div class="fld"><label>E-mail *</label><input id="usEmail" type="email"></div>'+
    '<div class="fld"><label>Cargo *</label><select id="usCargo">'+
     '<option value="operador">Operador</option>'+
     '<option value="admin_unidade">Administrador da unidade</option>'+
@@ -157,14 +185,13 @@ function abrirFormUsuario(){
    '</select></div>'+
    '<div class="modalActions">'+
     '<button class="btn2" onclick="fecharModal()">Cancelar</button>'+
-    '<button class="btn" onclick="salvarUsuario()">Criar acesso</button>'+
+    '<button class="btn" onclick="salvarUsuario()">Enviar convite</button>'+
    '</div></div></div>';
   document.body.insertAdjacentHTML('beforeend', html);
 }
 async function salvarUsuario(){
   var nome=$('usNome').value.trim();
   var email=$('usEmail').value.trim();
-  var senha=$('usSenha').value;
   var cargo=$('usCargo').value;
   var perfilId=$('usPerfil').value;
   var unidades = [];
@@ -173,20 +200,22 @@ async function salvarUsuario(){
   });
   if(!nome){ toast('Informe o nome.'); return; }
   if(!email||!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)){ toast('Informe um e-mail válido.'); return; }
-  if(!senha||senha.length<6){ toast('A senha precisa ter ao menos 6 caracteres.'); return; }
   if(!unidades.length){ toast('Marque ao menos uma unidade.'); return; }
   if(!perfilId){ toast('Selecione o perfil de acesso.'); return; }
 
   var r = await fetch(CFG.url+'/functions/v1/criar-pessoa', {
     method:'POST',
     headers: { 'Content-Type':'application/json', 'Authorization':'Bearer '+SESSAO.token, 'apikey':CFG.chave },
-    body: JSON.stringify({ nome:nome, email:email, senha:senha, cargo:cargo, unidades:unidades, perfil_id:perfilId })
+    body: JSON.stringify({
+      nome:nome, email:email, cargo:cargo, unidades:unidades, perfil_id:perfilId,
+      redirect_to: window.location.origin + window.location.pathname
+    })
   });
   var j = {};
   try{ j = await r.json(); }catch(e){}
-  if(!r.ok){ toast('Não consegui criar o acesso: '+(j.erro||'falha')); return; }
+  if(!r.ok){ toast('Não consegui enviar o convite: '+(j.erro||'falha')); return; }
 
   fecharModal();
-  toast('Usuário criado — já pode entrar com o e-mail e senha definidos.');
+  toast('Convite enviado — a pessoa recebe um e-mail pra definir a própria senha.');
   renderUsuarios();
 }
