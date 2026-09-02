@@ -16,6 +16,7 @@ async function renderAgendamentos(){
   desenharAgendamentos();
 }
 function desenharAgendamentos(){
+  ligarEscuta('agendamentos', 'agendamentos', SESSAO.unidadeAtual&&SESSAO.unidadeAtual.id, function(){ renderAgendamentos(); });
   var servicos = CACHE_CATALOGO.filter(function(i){return i.tipo==='servico'});
   var html = '<div class="card">'+
    '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">'+

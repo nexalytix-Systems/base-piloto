@@ -102,6 +102,7 @@ function alternarSidebar(){ SIDEBAR_COLAPSADA = !SIDEBAR_COLAPSADA; renderApp();
 function irPara(aba){ ABA_MOD=aba; renderApp(); }
 
 function renderMiolo(){
+  desligarTodasEscutas(); // troca de tela: nunca fica ouvindo o que já não está mais na tela
   if(ABA_MOD==='pdv') return renderPDV();
   if(ABA_MOD==='agenda') return renderAgendamentos();
   if(ABA_MOD==='catalogo') return renderCatalogo();

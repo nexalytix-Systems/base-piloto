@@ -154,6 +154,7 @@ async function fazerLogin(email, senha){
 }
 
 async function sair(){
+  desligarTodasEscutas();
   var cli = cliente();
   await cli.auth.signOut();
   SESSAO = { token:null, pessoa:null, organizacao:null, unidades:[], unidadeAtual:null, telasPermitidas:null };

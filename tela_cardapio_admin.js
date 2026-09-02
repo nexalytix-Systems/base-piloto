@@ -24,6 +24,10 @@ function desenharCardapioAdmin(){
 
 /* ---------- Pedidos recebidos ---------- */
 function desenharPedidosOnline(){
+  ligarEscuta('pedidos-online', 'pedidos_online', SESSAO.unidadeAtual&&SESSAO.unidadeAtual.id, function(payload){
+    if(payload.eventType==='INSERT') toast('Novo pedido chegou!');
+    renderCardapioAdmin();
+  });
   var pendentes = CACHE_PEDIDOS_ONLINE.filter(function(p){return p.situacao==='pendente'});
   var outros = CACHE_PEDIDOS_ONLINE.filter(function(p){return p.situacao!=='pendente'});
   var html = '<div class="card">'+
@@ -78,6 +82,7 @@ async function recusarPedidoOnline(id){
 
 /* ---------- Mesas ---------- */
 function desenharMesas(){
+  ligarEscuta('mesas', 'mesas', SESSAO.unidadeAtual&&SESSAO.unidadeAtual.id, function(){ renderCardapioAdmin(); });
   var html = '<div class="card">'+
    '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">'+
     '<h2 style="margin:0">Mesas</h2>'+
