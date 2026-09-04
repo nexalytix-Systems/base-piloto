@@ -72,8 +72,11 @@ function abrirEditarUsuario(id){
   var html = '<div class="modalBg" onclick="if(event.target===this)fecharModal()"><div class="modal">'+
    '<h2>Editar usuário</h2>'+
    '<div class="fld"><label>E-mail (login)</label>'+
-    '<div style="padding:9px 12px;background:var(--bg2);border:1px solid var(--line);border-radius:8px;color:var(--tx2)">'+
-     E(p.email||'não registrado')+'</div></div>'+
+    '<div style="display:flex;gap:8px">'+
+     '<div style="flex:1;padding:9px 12px;background:var(--bg2);border:1px solid var(--line);border-radius:8px;color:var(--tx2)">'+
+      E(p.email||'não registrado')+'</div>'+
+     '<button class="btn2" onclick="abrirAlterarEmail(\''+id+'\',\''+E(p.email||'').replace(/'/g,"\\'")+'\')">Alterar</button>'+
+    '</div></div>'+
    '<div class="fld"><label>Nome *</label><input id="euNome" value="'+E(p.nome)+'"></div>'+
    '<div class="fld"><label>Cargo *</label><select id="euCargo">'+
     '<option value="operador"'+(p.cargo==='operador'?' selected':'')+'>Operador</option>'+
@@ -96,6 +99,42 @@ function abrirEditarUsuario(id){
     '<button class="btn" onclick="salvarEdicaoUsuario(\''+id+'\')">Salvar</button>'+
    '</div></div></div>';
   document.body.insertAdjacentHTML('beforeend', html);
+}
+function abrirAlterarEmail(id, emailAtual){
+  var html = '<div class="modalBg" onclick="if(event.target===this)fecharModal()"><div class="modal">'+
+   '<h2>Alterar e-mail</h2>'+
+   '<p class="hint">Isso muda o e-mail de LOGIN dessa pessoa (e pra onde os códigos de verificação são mandados). '+
+   'Ela vai precisar usar o e-mail novo a partir de agora.</p>'+
+   '<div class="fld"><label>E-mail atual</label>'+
+    '<div style="padding:9px 12px;background:var(--bg2);border:1px solid var(--line);border-radius:8px;color:var(--tx2)">'+
+     E(emailAtual||'não registrado')+'</div></div>'+
+   '<div class="fld"><label>E-mail novo *</label><input id="aeEmail" type="email"></div>'+
+   '<div class="modalActions">'+
+    '<button class="btn2" onclick="fecharModal()">Cancelar</button>'+
+    '<button class="btn" onclick="confirmarAlterarEmail(\''+id+'\')">Alterar</button>'+
+   '</div></div></div>';
+  document.body.insertAdjacentHTML('beforeend', html);
+}
+async function confirmarAlterarEmail(id){
+  var novoEmail = $('aeEmail').value.trim();
+  if(!novoEmail||!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(novoEmail)){ toast('Informe um e-mail válido.'); return; }
+  var r;
+  try{
+    r = await fetch(CFG.url+'/functions/v1/alterar-email', {
+      method:'POST',
+      headers: { 'Content-Type':'application/json', 'Authorization':'Bearer '+SESSAO.token, 'apikey':CFG.chave },
+      body: JSON.stringify({ pessoa_id:id, novo_email:novoEmail })
+    });
+  }catch(e){
+    toast('Não consegui falar com o servidor. Confira o Console (F12) — detalhe: '+((e&&e.message)||'erro de rede'));
+    return;
+  }
+  var j = {};
+  try{ j = await r.json(); }catch(e){}
+  if(!r.ok){ toast('Não consegui alterar: '+(j.erro||'falha')); return; }
+  fecharModal();
+  toast('E-mail alterado. Use o novo endereço no próximo login.');
+  renderUsuarios();
 }
 function abrirRedefinirSenha(id, nome){
   var html = '<div class="modalBg" onclick="if(event.target===this)fecharModal()"><div class="modal">'+

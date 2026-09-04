@@ -124,7 +124,8 @@ async function salvarMovimentacao(){
     tipo: $('mvTipo').value,
     quantidade: Number(qtdTxt),
     motivo_id: $('mvMotivo').value || null,
-    observacao: $('mvObservacao').value.trim() || null
+    observacao: $('mvObservacao').value.trim() || null,
+    ref_local: uidLocal('mv')
   });
   if(r.error){ toast('Não consegui salvar: '+r.error.message); return; }
   fecharModal();
@@ -219,7 +220,8 @@ async function salvarNotaEntrada(){
   await cli.from('movimentacoes_estoque').insert(CARRINHO_NOTA.map(function(i){
     return { unidade_id: SESSAO.unidadeAtual.id, tipo_item:'produto', item_id:i.item_id,
       tipo:'entrada', quantidade:i.quantidade, custo_unitario:i.custo_unitario,
-      fornecedor_id:fornecedorId, observacao:'Nota de entrada'+($('neNumero').value?' #'+$('neNumero').value:'') };
+      fornecedor_id:fornecedorId, observacao:'Nota de entrada'+($('neNumero').value?' #'+$('neNumero').value:''),
+      ref_local: uidLocal('mv') };
   }));
 
   fecharModal();
@@ -302,7 +304,7 @@ async function concluirContagem(id){
       movs.push({
         unidade_id: SESSAO.unidadeAtual.id, tipo_item: it.tipo_item, item_id: it.item_id,
         tipo: dif>0?'entrada':'saida', quantidade: Math.abs(dif), motivo_id: motivoId,
-        observacao: 'Ajuste de contagem'
+        observacao: 'Ajuste de contagem', ref_local: uidLocal('mv')
       });
     }
   });
@@ -386,7 +388,7 @@ async function salvarTransferencia(){
   // saída já sai da origem na hora de enviar
   await cli.from('movimentacoes_estoque').insert(CARRINHO_TRANSF.map(function(i){
     return { unidade_id: SESSAO.unidadeAtual.id, tipo_item:'produto', item_id:i.item_id,
-      tipo:'saida', quantidade:i.quantidade, observacao:'Transferência enviada' };
+      tipo:'saida', quantidade:i.quantidade, observacao:'Transferência enviada', ref_local: uidLocal('mv') };
   }));
   fecharModal();
   toast('Transferência enviada — aguardando confirmação de recebimento.');
@@ -399,7 +401,7 @@ async function confirmarTransferencia(id){
   if(!transf || !itens){ toast('Não encontrei os dados da transferência.'); return; }
   await cli.from('movimentacoes_estoque').insert(itens.map(function(i){
     return { unidade_id: transf.unidade_destino_id, tipo_item:i.tipo_item, item_id:i.item_id,
-      tipo:'entrada', quantidade:i.quantidade, observacao:'Transferência recebida' };
+      tipo:'entrada', quantidade:i.quantidade, observacao:'Transferência recebida', ref_local: uidLocal('mv') };
   }));
   await cli.from('transferencias_estoque').update({ situacao:'recebida' }).eq('id', id);
   toast('Recebimento confirmado — estoque do destino atualizado.');

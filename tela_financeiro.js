@@ -102,7 +102,8 @@ async function salvarLancamento(){
     data_vencimento: vencimento,
     categoria_id: $('lnCategoria').value || null,
     conta_id: $('lnConta').value || null,
-    pago: false
+    pago: false,
+    ref_local: uidLocal('lf')
   });
   if(r.error){ toast('Não consegui salvar: '+r.error.message); return; }
   fecharModal();
