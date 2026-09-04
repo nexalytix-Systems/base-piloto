@@ -41,7 +41,7 @@ function montarItensMenu(){
     {id:'fornecedores',rotulo:'Fornecedores'},{id:'motivos',rotulo:'Motivos'}
   ]});
   if(mods.indexOf('producao')>=0&&libera('producao')) itens.push({id:'producao', rotulo:'Produção', icone:'estoque', filho:'ABA_PROD', ir:'irParaProd', sub:[
-    {id:'insumos',rotulo:'Insumos'},{id:'fichas',rotulo:'Fichas Técnicas'},{id:'unidadesmedida',rotulo:'Unidades de Medida'}
+    {id:'insumos',rotulo:'Insumos'},{id:'fichas',rotulo:'Fichas Técnicas'},{id:'ordens',rotulo:'Ordens de Produção'},{id:'unidadesmedida',rotulo:'Unidades de Medida'}
   ]});
   if(libera('clientes')) itens.push({id:'clientes', rotulo:'Clientes', icone:'usuarios', filho:'ABA_CLI', ir:'irParaCli', sub:[
     {id:'clientes',rotulo:'Clientes'},{id:'cupons',rotulo:'Cupons'}

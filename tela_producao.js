@@ -7,6 +7,7 @@ var ABA_PROD = 'insumos';
 var CACHE_INSUMOS = [];
 var CACHE_UNIDADES_MEDIDA = [];
 var CACHE_FICHAS = [];
+var CACHE_ORDENS_PRODUCAO = [];
 
 async function renderProducao(){
   var cli = cliente();
@@ -16,6 +17,8 @@ async function renderProducao(){
   CACHE_INSUMOS = ins || [];
   var { data: fichas } = await cli.from('fichas_tecnicas').select('*');
   CACHE_FICHAS = fichas || [];
+  var { data: ordens } = await cli.from('ordens_producao').select('*').order('criado_em', {ascending:false});
+  CACHE_ORDENS_PRODUCAO = ordens || [];
   await carregarCatalogo();
   desenharProducao();
 }
@@ -26,6 +29,7 @@ function nomeInsumo(id){ var i=CACHE_INSUMOS.find(function(x){return x.id===id})
 function desenharProducao(){
   if(ABA_PROD==='insumos') return desenharInsumos();
   if(ABA_PROD==='fichas') return desenharFichas();
+  if(ABA_PROD==='ordens') return desenharOrdensProducao();
   if(ABA_PROD==='unidadesmedida') return desenharUnidadesMedida();
 }
 
@@ -95,6 +99,83 @@ async function salvarInsumo(id){
   if(r.error){ toast('Não consegui salvar: '+r.error.message); return; }
   fecharModal();
   toast('Insumo salvo.');
+  renderProducao();
+}
+
+/* ---------- Ordens de Produção ---------- */
+function desenharOrdensProducao(){
+  var html = '<div class="card">'+
+   '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">'+
+    '<h2 style="margin:0">Ordens de Produção</h2>'+
+    '<button class="btn" onclick="abrirNovaOrdemProducao()">+ Produzir em lote</button>'+
+   '</div>'+
+   '<table><thead><tr><th>Data</th><th>Produto</th><th style="text-align:right">Quantidade</th>'+
+    '<th style="text-align:right">Custo total</th><th>Situação</th></tr></thead><tbody>'+
+   CACHE_ORDENS_PRODUCAO.map(function(o){
+     var ficha = CACHE_FICHAS.find(function(f){return f.id===o.ficha_id});
+     var prod = ficha ? CACHE_CATALOGO.find(function(p){return p.id===ficha.item_catalogo_id}) : null;
+     return '<tr><td>'+E((o.criado_em||'').slice(0,10))+'</td><td>'+E(prod?prod.nome:'—')+'</td>'+
+      '<td style="text-align:right">'+o.quantidade_produzida+'</td>'+
+      '<td style="text-align:right">R$ '+money(o.custo_total)+'</td>'+
+      '<td><span class="pill '+(o.situacao==='concluida'?'ok':'err')+'">'+
+       (o.situacao==='concluida'?'Concluída':'Cancelada')+'</span></td></tr>';
+   }).join('')+
+   (!CACHE_ORDENS_PRODUCAO.length?'<tr><td colspan="5" style="color:var(--tx2)">Nenhuma ordem ainda.</td></tr>':'')+
+   '</tbody></table></div>';
+  $('miolo').innerHTML = html;
+}
+function abrirNovaOrdemProducao(){
+  if(!CACHE_FICHAS.length){ toast('Cadastre uma ficha técnica primeiro.'); return; }
+  var html = '<div class="modalBg" onclick="if(event.target===this)fecharModal()"><div class="modal">'+
+   '<h2>Produzir em lote</h2>'+
+   '<div class="fld"><label>Ficha técnica (produto) *</label><select id="opFicha" onchange="atualizarPreviaOrdem()">'+
+    CACHE_FICHAS.map(function(f){
+      var prod = CACHE_CATALOGO.find(function(p){return p.id===f.item_catalogo_id});
+      return '<option value="'+f.id+'">'+E(prod?prod.nome:'—')+' (rendimento '+f.rendimento+')</option>';
+    }).join('')+
+   '</select></div>'+
+   '<div class="fld"><label>Quantidade a produzir *</label>'+
+    '<input id="opQuantidade" type="number" step="0.01" value="1" oninput="atualizarPreviaOrdem()"></div>'+
+   '<div id="opPrevia" style="margin:12px 0"></div>'+
+   '<div class="fld"><label>Observação</label><input id="opObservacao"></div>'+
+   '<div class="modalActions">'+
+    '<button class="btn2" onclick="fecharModal()">Cancelar</button>'+
+    '<button class="btn" onclick="confirmarOrdemProducao()">Produzir</button>'+
+   '</div></div></div>';
+  document.body.insertAdjacentHTML('beforeend', html);
+  atualizarPreviaOrdem();
+}
+async function atualizarPreviaOrdem(){
+  var fichaId = $('opFicha').value;
+  var qtd = Number($('opQuantidade').value)||0;
+  var ficha = CACHE_FICHAS.find(function(f){return f.id===fichaId});
+  if(!ficha || qtd<=0){ $('opPrevia').innerHTML = ''; return; }
+  var cli = cliente();
+  var { data: itens } = await cli.from('ficha_itens').select('*').eq('ficha_id', fichaId);
+  var fator = qtd / ficha.rendimento;
+  var html = '<p class="hint" style="margin-bottom:6px">Vai baixar do estoque:</p>'+
+   '<table><thead><tr><th>Insumo</th><th style="text-align:right">Quantidade</th></tr></thead><tbody>'+
+   (itens||[]).map(function(it){
+     var ins = CACHE_INSUMOS.find(function(i){return i.id===it.insumo_id});
+     return '<tr><td>'+E(ins?ins.nome:'—')+'</td><td style="text-align:right">'+
+      (it.quantidade*fator).toFixed(3)+' '+E(ins?nomeUnidadeMedida(ins.unidade_medida_id):'')+'</td></tr>';
+   }).join('')+
+   '</tbody></table>';
+  $('opPrevia').innerHTML = html;
+}
+async function confirmarOrdemProducao(){
+  var fichaId = $('opFicha').value;
+  var qtd = Number($('opQuantidade').value)||0;
+  if(qtd<=0){ toast('Informe uma quantidade válida.'); return; }
+  if(!SESSAO.unidadeAtual){ toast('Selecione uma unidade primeiro.'); return; }
+  var cli = cliente();
+  var { error } = await cli.rpc('registrar_ordem_producao', {
+    p_unidade_id: SESSAO.unidadeAtual.id, p_ficha_id: fichaId, p_quantidade: qtd,
+    p_observacao: $('opObservacao').value.trim() || null
+  });
+  if(error){ toast('Não consegui registrar: '+error.message); return; }
+  fecharModal();
+  toast('Produção registrada — estoque atualizado.');
   renderProducao();
 }
 

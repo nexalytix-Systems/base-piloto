@@ -27,7 +27,10 @@ async function renderPDV(){
 function desenharPDV(){
   var total = CARRINHO.reduce(function(s,i){return s+i.total},0);
   var html = '<div class="card">'+
-   '<h2>Frente de Loja</h2>'+
+   '<div style="display:flex;justify-content:space-between;align-items:center">'+
+    '<h2 style="margin:0">Frente de Loja</h2>'+
+    (ULTIMA_VENDA_CUPOM?'<button class="btn2" onclick="reimprimirUltimoCupom()">Imprimir último cupom</button>':'')+
+   '</div>'+
    '<div class="itemGrid">'+
     CACHE_CATALOGO.filter(function(i){return i.ativo!==false}).map(function(it){
       return '<button class="itemBtn" onclick="addCarrinho(\''+it.id+'\')">'+
@@ -128,9 +131,54 @@ async function confirmarVenda(){
   });
   if(e3){ toast('Venda gravada, mas o pagamento falhou: '+e3.message); return; }
 
+  CARRINHO_VENDIDO_PARA_CUPOM = itensPayload; // guarda antes de esvaziar, pro cupom poder imprimir
+  ULTIMA_VENDA_CUPOM = { venda:venda, itens:itensPayload, total:total, formaPagamentoId: $('vdForma')?$('vdForma').value:null };
   CARRINHO = [];
   CUPOM_APLICADO = null;
   fecharModal();
   toast('Venda concluída — R$ '+money(total));
   desenharPDV();
+
+  var u = SESSAO.unidadeAtual;
+  if(u && u.impressao_auto){
+    imprimirCupomVenda(venda, CARRINHO_VENDIDO_PARA_CUPOM, total, $('vdForma')?$('vdForma').value:null);
+  }
+}
+var CARRINHO_VENDIDO_PARA_CUPOM = [];
+var ULTIMA_VENDA_CUPOM = null;
+function reimprimirUltimoCupom(){
+  if(!ULTIMA_VENDA_CUPOM){ toast('Nenhuma venda recente pra reimprimir.'); return; }
+  imprimirCupomVenda(ULTIMA_VENDA_CUPOM.venda, ULTIMA_VENDA_CUPOM.itens, ULTIMA_VENDA_CUPOM.total, ULTIMA_VENDA_CUPOM.formaPagamentoId);
+}
+function imprimirCupomVenda(venda, itens, total, formaPagamentoId){
+  var u = SESSAO.unidadeAtual || {};
+  var forma = (CACHE_FORMAS_PAG||[]).find(function(f){return f.id===formaPagamentoId});
+  var largura = u.impressao_largura==='58mm' ? '58mm' : '80mm';
+  var html = '<html><head><meta charset="utf-8"><title>Cupom</title><style>'+
+   'body{font-family:monospace;width:'+largura+';margin:0 auto;padding:8px;font-size:12px}'+
+   'h1{font-size:13px;text-align:center;margin:0 0 4px}'+
+   '.linha{display:flex;justify-content:space-between}'+
+   'hr{border:none;border-top:1px dashed #000;margin:6px 0}'+
+   '.centro{text-align:center}'+
+   '</style></head><body>'+
+   (u.impressao_cabecalho?'<div class="centro">'+E(u.impressao_cabecalho)+'</div><hr>':'')+
+   '<h1>'+E(u.nome||'Cupom de Venda')+'</h1>'+
+   '<div class="linha"><span>Data</span><span>'+new Date().toLocaleString('pt-BR')+'</span></div>'+
+   '<hr>'+
+   itens.map(function(i){
+     return '<div class="linha"><span>'+i.quantidade+'x '+E(i.nome)+'</span><span>R$ '+money(i.total)+'</span></div>';
+   }).join('')+
+   '<hr>'+
+   '<div class="linha"><b>Total</b><b>R$ '+money(total)+'</b></div>'+
+   (forma?'<div class="linha"><span>Pagamento</span><span>'+E(forma.nome)+'</span></div>':'')+
+   '<hr>'+
+   (u.impressao_rodape?'<div class="centro">'+E(u.impressao_rodape)+'</div>':'')+
+   (u.impressao_mostrar_logo!==false?'<div class="centro" style="margin-top:6px;color:#888">Wirtu</div>':'')+
+   '</body></html>';
+  var janela = window.open('', '_blank', 'width=400,height=600');
+  if(!janela){ toast('O navegador bloqueou a janela de impressão — permita pop-ups pra esse site.'); return; }
+  janela.document.write(html);
+  janela.document.close();
+  janela.focus();
+  setTimeout(function(){ janela.print(); }, 300);
 }

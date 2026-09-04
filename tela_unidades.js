@@ -23,7 +23,9 @@ function renderUnidades(){
         :(u.ativa!==false?'<span class="pill ok">Ativa</span>':'<span class="pill err">Inativa</span>'))+'</td>'+
       '<td>'+(SESSAO.unidadeAtual&&SESSAO.unidadeAtual.id===u.id
         ?'<span style="color:var(--tx2);font-size:13px">unidade atual</span>'
-        :'<button class="btn2" onclick="trocarUnidade(\''+u.id+'\')">Usar esta</button>')+'</td></tr>';
+        :'<button class="btn2" onclick="trocarUnidade(\''+u.id+'\')">Usar esta</button>')+
+       (admin?' <button class="btn2" onclick="abrirConfigImpressao(\''+u.id+'\')">Impressão</button>':'')+
+       '</td></tr>';
    }).join('')+
    (!SESSAO.unidades.length?'<tr><td colspan="4" style="color:var(--tx2)">Você não está vinculado a nenhuma unidade ainda — peça pro administrador liberar.</td></tr>':'')+
    '</tbody></table></div>'+
@@ -51,6 +53,48 @@ async function alternarModuloOrganizacao(moduloId, ligar){
   SESSAO.organizacao.modulos_contratados = atuais;
   toast(ligar ? 'Módulo ligado.' : 'Módulo desligado.');
   renderApp();
+}
+function abrirConfigImpressao(unidadeId){
+  var u = SESSAO.unidades.find(function(x){return x.id===unidadeId});
+  if(!u) return;
+  var html = '<div class="modalBg" onclick="if(event.target===this)fecharModal()"><div class="modal">'+
+   '<h2>Configuração de Impressão — '+E(u.nome)+'</h2>'+
+   '<label style="display:flex;gap:8px;align-items:center;font-size:14px;padding:8px 0">'+
+    '<input type="checkbox" id="ciAuto" '+(u.impressao_auto?'checked':'')+' style="width:auto"> '+
+    'Imprimir automaticamente ao concluir a venda</label>'+
+   '<div class="fld"><label>Largura do papel</label><select id="ciLargura">'+
+    '<option value="80mm"'+(u.impressao_largura!=='58mm'?' selected':'')+'>80mm (padrão)</option>'+
+    '<option value="58mm"'+(u.impressao_largura==='58mm'?' selected':'')+'>58mm (bobina pequena)</option>'+
+   '</select></div>'+
+   '<div class="fld"><label>Texto do cabeçalho (nome/endereço da loja)</label>'+
+    '<input id="ciCabecalho" value="'+E(u.impressao_cabecalho||'')+'" placeholder="Ex.: Cafeteria Doce Aroma - Rua X, 123"></div>'+
+   '<div class="fld"><label>Texto do rodapé</label>'+
+    '<input id="ciRodape" value="'+E(u.impressao_rodape||'')+'" placeholder="Ex.: Obrigado pela preferência!"></div>'+
+   '<label style="display:flex;gap:8px;align-items:center;font-size:14px;padding:8px 0">'+
+    '<input type="checkbox" id="ciLogo" '+(u.impressao_mostrar_logo!==false?'checked':'')+' style="width:auto"> '+
+    'Mostrar o logo do Wirtu no rodapé do cupom</label>'+
+   '<div class="modalActions">'+
+    '<button class="btn2" onclick="fecharModal()">Cancelar</button>'+
+    '<button class="btn" onclick="salvarConfigImpressao(\''+unidadeId+'\')">Salvar</button>'+
+   '</div></div></div>';
+  document.body.insertAdjacentHTML('beforeend', html);
+}
+async function salvarConfigImpressao(unidadeId){
+  var cli = cliente();
+  var payload = {
+    impressao_auto: $('ciAuto').checked,
+    impressao_largura: $('ciLargura').value,
+    impressao_cabecalho: $('ciCabecalho').value.trim() || null,
+    impressao_rodape: $('ciRodape').value.trim() || null,
+    impressao_mostrar_logo: $('ciLogo').checked
+  };
+  var r = await cli.from('unidades').update(payload).eq('id', unidadeId);
+  if(r.error){ toast('Não consegui salvar: '+r.error.message); return; }
+  var u = SESSAO.unidades.find(function(x){return x.id===unidadeId});
+  if(u) Object.assign(u, payload);
+  fecharModal();
+  toast('Configuração de impressão salva.');
+  renderUnidades();
 }
 function trocarUnidade(id){
   SESSAO.unidadeAtual = SESSAO.unidades.find(function(u){return u.id===id});
